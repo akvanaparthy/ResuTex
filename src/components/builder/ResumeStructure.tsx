@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, GripVertical, MoreVertical, ChevronDown, ChevronRight, Trash2, Layers } from "lucide-react";
+import { Plus, GripVertical, MoreVertical, ChevronDown, ChevronRight, Trash2, Layers, Check, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,7 +30,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-const SECTION_TYPES = [
+// Suggested common sections (can still add custom ones)
+const SUGGESTED_SECTIONS = [
   "SUMMARY",
   "EDUCATION",
   "EXPERIENCE",
@@ -37,16 +39,15 @@ const SECTION_TYPES = [
   "SKILLS",
   "ACHIEVEMENTS",
   "CERTIFICATIONS",
-] as const;
+  "AWARDS",
+  "PUBLICATIONS",
+  "LANGUAGES",
+  "INTERESTS",
+];
 
-const SECTION_ICONS: Record<string, string> = {
-  SUMMARY: "S",
-  EDUCATION: "Ed",
-  EXPERIENCE: "Ex",
-  PROJECTS: "Pr",
-  SKILLS: "Sk",
-  ACHIEVEMENTS: "Ac",
-  CERTIFICATIONS: "Ce",
+// Generate icon from section name (first 2 letters)
+const getSectionIcon = (sectionType: string): string => {
+  return sectionType.substring(0, 2).toUpperCase();
 };
 
 interface SortableBlockItemProps {
@@ -168,7 +169,7 @@ function SortableSection({
         >
           <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
             <span className="text-[10px] font-bold text-primary">
-              {SECTION_ICONS[sectionType] || sectionType[0]}
+              {getSectionIcon(sectionType)}
             </span>
           </div>
           <div className="flex-1 min-w-0">
@@ -248,6 +249,8 @@ function SortableSection({
 export function ResumeStructure() {
   const { structure, blocks, removeBlockFromSection, addSection, removeSection, reorderSections, reorderBlocksInSection } = useBuilderStore();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(structure.sectionOrder));
+  const [isAddingCustom, setIsAddingCustom] = useState(false);
+  const [customSectionName, setCustomSectionName] = useState("");
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -266,9 +269,27 @@ export function ResumeStructure() {
     setExpandedSections(newExpanded);
   };
 
-  const availableSections = SECTION_TYPES.filter(
+  const availableSuggestions = SUGGESTED_SECTIONS.filter(
     (type) => !structure.sectionOrder.includes(type)
   );
+
+  const handleAddCustomSection = () => {
+    const trimmed = customSectionName.trim().toUpperCase();
+    if (trimmed && !structure.sectionOrder.includes(trimmed)) {
+      addSection(trimmed);
+      setCustomSectionName("");
+      setIsAddingCustom(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleAddCustomSection();
+    } else if (e.key === "Escape") {
+      setIsAddingCustom(false);
+      setCustomSectionName("");
+    }
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -347,9 +368,40 @@ export function ResumeStructure() {
         </div>
       </ScrollArea>
 
-      {/* Add Section Button */}
-      <div className="p-3 border-t border-border/60">
-        {availableSections.length > 0 ? (
+      {/* Add Section Area */}
+      <div className="p-3 border-t border-border/60 space-y-2">
+        {isAddingCustom ? (
+          <div className="flex items-center gap-1">
+            <Input
+              placeholder="SECTION NAME"
+              value={customSectionName}
+              onChange={(e) => setCustomSectionName(e.target.value.toUpperCase())}
+              onKeyDown={handleKeyDown}
+              className="h-8 text-xs uppercase"
+              autoFocus
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950"
+              onClick={handleAddCustomSection}
+              disabled={!customSectionName.trim()}
+            >
+              <Check className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => {
+                setIsAddingCustom(false);
+                setCustomSectionName("");
+              }}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -360,28 +412,26 @@ export function ResumeStructure() {
                 Add Section
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-48">
-              {availableSections.map((section) => (
+            <DropdownMenuContent className="w-52">
+              {availableSuggestions.slice(0, 8).map((section) => (
                 <DropdownMenuItem key={section} onClick={() => addSection(section)}>
                   <div className="w-5 h-5 rounded bg-primary/10 flex items-center justify-center mr-2">
                     <span className="text-[9px] font-bold text-primary">
-                      {SECTION_ICONS[section] || section[0]}
+                      {getSectionIcon(section)}
                     </span>
                   </div>
                   {section}
                 </DropdownMenuItem>
               ))}
+              {availableSuggestions.length > 0 && (
+                <div className="h-px bg-border my-1" />
+              )}
+              <DropdownMenuItem onClick={() => setIsAddingCustom(true)}>
+                <Plus className="h-3.5 w-3.5 mr-2 text-primary" />
+                <span className="text-primary font-medium">Custom Section...</span>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        ) : (
-          <Button
-            variant="outline"
-            className="w-full h-8 text-xs border-dashed border-border/60 opacity-50 cursor-not-allowed"
-            disabled
-          >
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            All sections added
-          </Button>
         )}
       </div>
     </div>

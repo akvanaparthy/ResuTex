@@ -22,7 +22,7 @@ import {
 import { ChevronDown, Plus } from "lucide-react";
 import { useBuilderStore } from "@/lib/store/builder-store";
 
-const SECTION_TYPES = [
+const SUGGESTED_SECTION_TYPES = [
   "SUMMARY",
   "EDUCATION",
   "EXPERIENCE",
@@ -30,7 +30,10 @@ const SECTION_TYPES = [
   "SKILLS",
   "ACHIEVEMENTS",
   "CERTIFICATIONS",
-] as const;
+  "AWARDS",
+  "PUBLICATIONS",
+  "LANGUAGES",
+];
 
 interface CreateBlockModalProps {
   open: boolean;
@@ -38,11 +41,18 @@ interface CreateBlockModalProps {
 }
 
 export function CreateBlockModal({ open, onOpenChange }: CreateBlockModalProps) {
-  const { addBlock } = useBuilderStore();
+  const { addBlock, structure } = useBuilderStore();
   const [name, setName] = useState("");
   const [sectionType, setSectionType] = useState<string>("EXPERIENCE");
   const [latexContent, setLatexContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCustomSection, setIsCustomSection] = useState(false);
+
+  // Combine existing sections from resume with suggested ones
+  const existingSections = structure.sectionOrder;
+  const allSectionTypes = Array.from(
+    new Set([...existingSections, ...SUGGESTED_SECTION_TYPES])
+  ).sort();
 
   const handleSubmit = async () => {
     if (!name.trim() || !latexContent.trim()) return;
@@ -99,24 +109,51 @@ export function CreateBlockModal({ open, onOpenChange }: CreateBlockModalProps) 
 
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">Section Type</Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between h-9 text-sm border-border/40 bg-muted/30 hover:bg-muted/50">
-                    {sectionType}
-                    <ChevronDown className="h-3.5 w-3.5 ml-2 opacity-50" />
+              {isCustomSection ? (
+                <div className="flex gap-1">
+                  <Input
+                    placeholder="CUSTOM SECTION"
+                    value={sectionType}
+                    onChange={(e) => setSectionType(e.target.value.toUpperCase())}
+                    className="h-9 text-sm bg-muted/30 border-border/40 uppercase flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-2"
+                    onClick={() => {
+                      setIsCustomSection(false);
+                      setSectionType("EXPERIENCE");
+                    }}
+                  >
+                    Cancel
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-48">
-                  {SECTION_TYPES.map((type) => (
-                    <DropdownMenuItem
-                      key={type}
-                      onClick={() => setSectionType(type)}
-                    >
-                      {type}
+                </div>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between h-9 text-sm border-border/40 bg-muted/30 hover:bg-muted/50">
+                      {sectionType}
+                      <ChevronDown className="h-3.5 w-3.5 ml-2 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-48">
+                    {allSectionTypes.map((type) => (
+                      <DropdownMenuItem
+                        key={type}
+                        onClick={() => setSectionType(type)}
+                      >
+                        {type}
+                      </DropdownMenuItem>
+                    ))}
+                    <div className="h-px bg-border my-1" />
+                    <DropdownMenuItem onClick={() => setIsCustomSection(true)}>
+                      <Plus className="h-3.5 w-3.5 mr-2 text-primary" />
+                      <span className="text-primary font-medium">Custom...</span>
                     </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
 

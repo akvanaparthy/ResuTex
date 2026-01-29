@@ -6,17 +6,25 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Search, FileText, BookOpen, Check } from "lucide-react";
+import { Plus, Search, FileText, BookOpen, Check, Trash2, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useBuilderStore } from "@/lib/store/builder-store";
 import { CreateBlockModal } from "@/components/modals/CreateBlockModal";
 
-const SECTION_FILTERS = ["ALL", "SUMMARY", "EDUCATION", "EXPERIENCE", "PROJECTS", "SKILLS"] as const;
-
 export function BlockLibrary() {
-  const { blocks, structure, addBlockToSection } = useBuilderStore();
+  const { blocks, structure, addBlockToSection, removeBlock } = useBuilderStore();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("ALL");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // Get unique section types from blocks
+  const uniqueSectionTypes = Array.from(new Set(blocks.map((b) => b.sectionType))).sort();
+  const sectionFilters = ["ALL", ...uniqueSectionTypes];
 
   const filteredBlocks = blocks.filter((block) => {
     const matchesSearch = block.name.toLowerCase().includes(search.toLowerCase());
@@ -27,6 +35,12 @@ export function BlockLibrary() {
   const handleAddBlock = (blockId: string, sectionType: string) => {
     if (structure.sectionOrder.includes(sectionType)) {
       addBlockToSection(blockId, sectionType);
+    }
+  };
+
+  const handleDeleteBlock = async (blockId: string) => {
+    if (confirm("Delete this block? This cannot be undone.")) {
+      await removeBlock(blockId);
     }
   };
 
@@ -62,15 +76,17 @@ export function BlockLibrary() {
       </div>
 
       <Tabs defaultValue="ALL" className="flex-1 flex flex-col min-h-0" onValueChange={setFilter}>
-        <div className="px-3 pt-2">
-          <TabsList className="w-full justify-start h-auto flex-wrap gap-0.5 bg-muted/40 p-0.5">
-            {SECTION_FILTERS.map((tab) => (
-              <TabsTrigger key={tab} value={tab} className="text-[10px] px-2 py-1 h-6 data-[state=active]:shadow-sm">
-                {tab}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
+        {sectionFilters.length > 1 && (
+          <div className="px-3 pt-2">
+            <TabsList className="w-full justify-start h-auto flex-wrap gap-0.5 bg-muted/40 p-0.5">
+              {sectionFilters.map((tab) => (
+                <TabsTrigger key={tab} value={tab} className="text-[10px] px-2 py-1 h-6 data-[state=active]:shadow-sm">
+                  {tab}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+        )}
 
         <ScrollArea className="flex-1">
           <div className="p-3">
@@ -100,15 +116,37 @@ export function BlockLibrary() {
                       <CardContent className="p-3">
                         <div className="space-y-2">
                           <div className="flex items-start justify-between gap-1.5">
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <p className="font-medium text-sm truncate leading-tight">{block.name}</p>
                               <p className="text-xs text-muted-foreground mt-0.5">{block.sectionType}</p>
                             </div>
-                            {isInResume && (
-                              <div className="w-4 h-4 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
-                                <Check className="h-2.5 w-2.5 text-primary" />
-                              </div>
-                            )}
+                            <div className="flex items-center gap-1">
+                              {isInResume && (
+                                <div className="w-4 h-4 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+                                  <Check className="h-2.5 w-2.5 text-primary" />
+                                </div>
+                              )}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <MoreVertical className="h-3.5 w-3.5" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() => handleDeleteBlock(block.id)}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5 mr-2" />
+                                    Delete Block
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </div>
                           <p className="text-xs text-muted-foreground/70 line-clamp-2 font-mono leading-relaxed">
                             {block.latexContent.substring(0, 65)}...
