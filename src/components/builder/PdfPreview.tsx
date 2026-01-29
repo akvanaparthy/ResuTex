@@ -2,12 +2,104 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Download, ZoomIn, ZoomOut, FileText, AlertTriangle } from "lucide-react";
+import { RefreshCw, Download, ZoomIn, ZoomOut, FileText, AlertTriangle, Package } from "lucide-react";
 import { useBuilderStore } from "@/lib/store/builder-store";
+import { useToast } from "@/hooks/use-toast";
 
 export function PdfPreview() {
   const { isCompiling, pdfUrl, compile, error } = useBuilderStore();
   const [zoom, setZoom] = useState(100);
+  const [isSettingUp, setIsSettingUp] = useState(false);
+  const { toast } = useToast();
+
+  const handleLatexSetup = async () => {
+    setIsSettingUp(true);
+    toast({
+      title: "Installing LaTeX Packages",
+      description: "This may take 1-2 minutes. Please wait...",
+    });
+
+    try {
+      const response = await fetch("/api/latex-setup", {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "✓ Setup Complete",
+          description: data.message,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Setup Failed",
+          description: data.error,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Setup Error",
+        description: "Failed to run LaTeX setup. Check console for details.",
+        variant: "destructive",
+      });
+      console.error("LaTeX setup error:", error);
+    } finally {
+      setIsSettingUp(false);
+    }
+  };
+
+  const handleDebugLatex = async () => {
+    const state = useBuilderStore.getState();
+    if (!state.documentId) return;
+
+    try {
+      const response = await fetch("/api/compile-debug", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId: state.documentId }),
+      });
+
+      const data = await response.json();
+
+      // Open LaTeX in a new window for inspection
+      const debugWindow = window.open("", "_blank");
+      if (debugWindow) {
+        debugWindow.document.write(`
+          <html>
+            <head>
+              <title>LaTeX Source Debug</title>
+              <style>
+                body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+                pre { white-space: pre-wrap; word-wrap: break-word; line-height: 1.5; }
+                .line-num { color: #858585; user-select: none; }
+                h2 { color: #4ec9b0; }
+                .block { margin: 10px 0; padding: 10px; background: #252526; border-left: 3px solid #007acc; }
+              </style>
+            </head>
+            <body>
+              <h1>LaTeX Source Debug</h1>
+              <h2>Blocks:</h2>
+              ${data.blocks.map((b: any) => `
+                <div class="block">
+                  <strong>${b.name}</strong> (${b.sectionType})<br/>
+                  <small>${b.contentPreview}...</small>
+                </div>
+              `).join("")}
+              <h2>Generated LaTeX (with line numbers):</h2>
+              <pre>${data.numberedLatex}</pre>
+            </body>
+          </html>
+        `);
+      }
+
+      console.log("LaTeX Debug:", data);
+    } catch (error) {
+      console.error("Debug error:", error);
+    }
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -18,7 +110,7 @@ export function PdfPreview() {
             variant={isCompiling ? "secondary" : "default"}
             size="sm"
             onClick={compile}
-            disabled={isCompiling}
+            disabled={isCompiling || isSettingUp}
             className="h-7 text-xs gap-1.5 min-w-[100px]"
           >
             {isCompiling ? (
@@ -33,7 +125,27 @@ export function PdfPreview() {
               </>
             )}
           </Button>
-          {pdfUrl && !isCompiling && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLatexSetup}
+            disabled={isSettingUp || isCompiling}
+            className="h-7 text-xs gap-1.5 border-border/60"
+            title="Install required LaTeX packages"
+          >
+            {isSettingUp ? (
+              <>
+                <Package className="h-3 w-3 animate-spin" />
+                Installing...
+              </>
+            ) : (
+              <>
+                <Package className="h-3 w-3" />
+                Setup
+              </>
+            )}
+          </Button>
+          {pdfUrl && !isCompiling && !isSettingUp && (
             <div className="flex items-center gap-1 ml-1">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse-dot" />
               <span className="text-[10px] text-muted-foreground">Ready</span>

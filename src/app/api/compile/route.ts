@@ -90,44 +90,111 @@ export async function POST(request: NextRequest) {
     // Write LaTeX file
     await writeFile(texFile, latexContent, "utf-8");
 
-    // Run pdflatex (run twice for proper references)
+    // Check if pdflatex is available
     try {
-      await execAsync(
-        `pdflatex -interaction=nonstopmode -output-directory="${tempDir}" "${texFile}"`,
-        { timeout: 30000 }
+      await execAsync("pdflatex --version", { timeout: 5000 });
+    } catch (versionError) {
+      console.error("pdflatex not found in PATH:", versionError);
+      return NextResponse.json(
+        {
+          error:
+            "pdflatex is not installed or not in PATH. Please install MiKTeX or TeX Live and restart the server.\n\nSee LATEX_SETUP.md for installation instructions.",
+        },
+        { status: 500 }
       );
+    }
+
+    // Run pdflatex (run twice for proper references)
+    // Use different path handling for Windows
+    const isWindows = process.platform === "win32";
+    const pdflatexCmd = isWindows
+      ? `pdflatex -interaction=nonstopmode -output-directory="${tempDir}" "${texFile}"`
+      : `pdflatex -interaction=nonstopmode -output-directory="${tempDir}" "${texFile}"`;
+
+    try {
+      // First pass - longer timeout to allow for package installation
+      const result1 = await execAsync(pdflatexCmd, {
+        timeout: 90000, // 90 seconds for first pass (may install packages)
+        windowsHide: true,
+      });
+
       // Second pass for cross-references
-      await execAsync(
-        `pdflatex -interaction=nonstopmode -output-directory="${tempDir}" "${texFile}"`,
-        { timeout: 30000 }
-      );
+      const result2 = await execAsync(pdflatexCmd, {
+        timeout: 60000, // 60 seconds for second pass
+        windowsHide: true,
+      });
+
+      console.log("pdflatex first pass completed");
+      console.log("pdflatex second pass completed");
     } catch (latexError: unknown) {
+      console.error("pdflatex execution error:", latexError);
+
       // Try to read the log file for detailed error
       const logFile = path.join(tempDir, "resume.log");
       let errorMessage = "LaTeX compilation failed";
-      
+      let errorContext = "";
+
       try {
         const logContent = await readFile(logFile, "utf-8");
+
         // Extract error lines from log
-        const errorLines = logContent
-          .split("\n")
-          .filter((line) => line.startsWith("!") || line.includes("Error:"))
-          .slice(0, 10)
-          .join("\n");
-        
-        if (errorLines) {
-          errorMessage = errorLines;
+        const lines = logContent.split("\n");
+        const errorIndex = lines.findIndex((line) => line.startsWith("!"));
+
+        if (errorIndex >= 0) {
+          // Get the error and surrounding context
+          const contextLines = lines.slice(Math.max(0, errorIndex - 2), errorIndex + 8);
+          errorContext = contextLines.join("\n");
+
+          // Extract just the error message for display
+          const errorLines = lines
+            .filter((line) => line.startsWith("!") || line.includes("Error:"))
+            .slice(0, 3)
+            .join("\n");
+
+          if (errorLines) {
+            errorMessage = errorLines;
+          }
         }
-      } catch {
+      } catch (logError) {
+        console.error("Could not read log file:", logError);
         // Log file not available
-        const execError = latexError as { stderr?: string; message?: string };
+        const execError = latexError as { stderr?: string; stdout?: string; message?: string };
         if (execError.stderr) {
           errorMessage = execError.stderr;
+        } else if (execError.stdout) {
+          // Try to extract error from stdout
+          const stdout = execError.stdout || "";
+          const errorMatch = stdout.match(/! LaTeX Error:.*\n/);
+          if (errorMatch) {
+            errorMessage = errorMatch[0];
+          } else {
+            errorMessage = execError.stdout;
+          }
+        } else if (execError.message) {
+          errorMessage = execError.message;
         }
       }
 
+      console.error("Final error message:", errorMessage);
+      console.error("Error context from log:", errorContext);
+
+      // Add helpful suggestions based on error type
+      let helpText = "";
+      if (errorMessage.includes("missing \\item")) {
+        helpText = "\n\nCommon fix: Check your blocks for empty itemize/enumerate environments.\nMake sure every \\resumeItemListStart has at least one \\resumeItem before \\resumeItemListEnd.";
+      } else if (errorMessage.includes("Undefined control sequence")) {
+        helpText = "\n\nCommon fix: You're using a LaTeX command that isn't defined.\nMake sure your template preamble defines all custom commands like \\resumeItem, \\resumeHeading, etc.";
+      } else if (errorMessage.includes("Missing $ inserted")) {
+        helpText = "\n\nCommon fix: Special characters like &, %, $, _, # need to be escaped.\nUse \\& \\% \\$ \\_ \\# instead.";
+      }
+
       return NextResponse.json(
-        { error: errorMessage, latex: latexContent },
+        {
+          error: errorMessage + helpText,
+          latex: latexContent,
+          fullLog: errorContext
+        },
         { status: 500 }
       );
     }
