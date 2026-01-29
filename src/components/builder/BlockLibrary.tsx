@@ -4,9 +4,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Search, FileText } from "lucide-react";
+import { Plus, Search, FileText, BookOpen, Check } from "lucide-react";
 import { useBuilderStore } from "@/lib/store/builder-store";
 import { CreateBlockModal } from "@/components/modals/CreateBlockModal";
 
@@ -25,7 +25,6 @@ export function BlockLibrary() {
   });
 
   const handleAddBlock = (blockId: string, sectionType: string) => {
-    // Check if section exists, if not we might need to create it
     if (structure.sectionOrder.includes(sectionType)) {
       addBlockToSection(blockId, sectionType);
     }
@@ -33,33 +32,40 @@ export function BlockLibrary() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="p-4 border-b space-y-3">
+      <div className="px-4 py-3 border-b border-border/60 space-y-2.5">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-sm uppercase text-muted-foreground">
-            Block Library
-          </h2>
-          <Button size="sm" onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" />
-            New Block
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-3.5 w-3.5 text-primary" />
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground/70">
+              Block Library
+            </h2>
+          </div>
+          <Button
+            size="sm"
+            className="h-7 text-xs gap-1 px-2.5"
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            <Plus className="h-3 w-3" />
+            New
           </Button>
         </div>
-        
+
         <div className="relative">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Search blocks..."
-            className="pl-8"
+            className="h-8 pl-8 text-xs bg-muted/40 border-border/40 focus:bg-background transition-colors"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
       </div>
 
-      <Tabs defaultValue="ALL" className="flex-1 flex flex-col" onValueChange={setFilter}>
-        <div className="px-4 pt-2">
-          <TabsList className="w-full justify-start h-auto flex-wrap gap-1">
+      <Tabs defaultValue="ALL" className="flex-1 flex flex-col min-h-0" onValueChange={setFilter}>
+        <div className="px-3 pt-2">
+          <TabsList className="w-full justify-start h-auto flex-wrap gap-0.5 bg-muted/40 p-0.5">
             {SECTION_FILTERS.map((tab) => (
-              <TabsTrigger key={tab} value={tab} className="text-xs px-2 py-1">
+              <TabsTrigger key={tab} value={tab} className="text-[10px] px-2 py-1 h-6 data-[state=active]:shadow-sm">
                 {tab}
               </TabsTrigger>
             ))}
@@ -67,16 +73,18 @@ export function BlockLibrary() {
         </div>
 
         <ScrollArea className="flex-1">
-          <div className="p-4">
+          <div className="p-3">
             {filteredBlocks.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No blocks found.</p>
-                <p className="text-sm">Create your first block!</p>
+              <div className="text-center py-8 animate-fade-in">
+                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center mx-auto mb-3">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <p className="text-sm font-medium text-foreground/60">No blocks found</p>
+                <p className="text-xs text-muted-foreground mt-1">Create your first block</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2">
-                {filteredBlocks.map((block) => {
+                {filteredBlocks.map((block, index) => {
                   const isInResume = Object.values(structure.sections)
                     .flat()
                     .includes(block.id);
@@ -84,27 +92,35 @@ export function BlockLibrary() {
                   return (
                     <Card
                       key={block.id}
-                      className={`cursor-pointer hover:border-primary/50 transition-colors ${
-                        isInResume ? "border-primary/30 bg-primary/5" : ""
+                      className={`group cursor-pointer transition-all duration-200 animate-fade-in-up border-border/40 hover:border-border hover:shadow-sm ${
+                        isInResume ? "border-primary/25 bg-primary/[0.03]" : "bg-card/60"
                       }`}
+                      style={{ animationDelay: `${index * 30}ms` }}
                     >
                       <CardContent className="p-3">
                         <div className="space-y-2">
-                          <div>
-                            <p className="font-medium text-sm truncate">{block.name}</p>
-                            <p className="text-xs text-muted-foreground">{block.sectionType}</p>
+                          <div className="flex items-start justify-between gap-1.5">
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate leading-tight">{block.name}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">{block.sectionType}</p>
+                            </div>
+                            {isInResume && (
+                              <div className="w-4 h-4 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+                                <Check className="h-2.5 w-2.5 text-primary" />
+                              </div>
+                            )}
                           </div>
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {block.latexContent.substring(0, 60)}...
+                          <p className="text-xs text-muted-foreground/70 line-clamp-2 font-mono leading-relaxed">
+                            {block.latexContent.substring(0, 65)}...
                           </p>
                           <Button
                             size="sm"
                             variant={isInResume ? "secondary" : "outline"}
-                            className="w-full text-xs"
+                            className="w-full h-7 text-xs border-border/40 transition-all"
                             onClick={() => handleAddBlock(block.id, block.sectionType)}
                             disabled={isInResume || !structure.sectionOrder.includes(block.sectionType)}
                           >
-                            {isInResume ? "Added" : "+ Add"}
+                            {isInResume ? "Added" : "+ Add to Resume"}
                           </Button>
                         </div>
                       </CardContent>

@@ -1,4 +1,4 @@
-export const DEFAULT_PREAMBLE = `\\documentclass[letterpaper,10.5pt]{article}
+export const DEFAULT_PREAMBLE = `\\documentclass[legalpaper,10.5pt]{article}
 
 \\usepackage[empty]{fullpage}
 \\usepackage{titlesec}
@@ -15,7 +15,7 @@ export const DEFAULT_PREAMBLE = `\\documentclass[letterpaper,10.5pt]{article}
 
 %----------PAGE SETUP----------
 \\geometry{
-    letterpaper,
+    legalpaper,
     left=0.5in,
     right=0.5in,
     top=0.5in,

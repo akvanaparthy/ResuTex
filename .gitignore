@@ -65,3 +65,7 @@ prisma/dev.db-journal
 # Chat and temp files
 chat.json
 *.tmp
+
+.claude
+
+IMPLEMENTATION_PLAN.md

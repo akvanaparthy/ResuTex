@@ -8,13 +8,12 @@ const sampleBlocks = [
     sectionType: "EXPERIENCE",
     blockType: "experience-item",
     latexContent: `\\resumeExperienceHeading
-  {Software Engineer Intern}{Jun 2023 -- Aug 2023}
-  {Tech Company Inc.}{San Francisco, CA}
-\\resumeItemListStart
-  \\resumeItem{Developed and deployed a microservice using Python and FastAPI that processed 10K+ requests daily}
-  \\resumeItem{Implemented CI/CD pipeline using GitHub Actions, reducing deployment time by 40\\%}
-  \\resumeItem{Collaborated with cross-functional team to design RESTful APIs following OpenAPI specification}
-\\resumeItemListEnd`,
+      {Software Engineer Intern | Tech Company Inc., San Francisco, CA}{Jun 2023 -- Aug 2023}{}
+      \\resumeItemListStart
+        \\resumeItem{Developed and deployed a microservice using Python and FastAPI that processed 10K+ requests daily}
+        \\resumeItem{Implemented CI/CD pipeline using GitHub Actions, reducing deployment time by 40\\%}
+        \\resumeItem{Collaborated with cross-functional team to design RESTful APIs following OpenAPI specification}
+      \\resumeItemListEnd`,
     templateData: JSON.stringify({
       position: "Software Engineer Intern",
       dates: "Jun 2023 -- Aug 2023",
@@ -28,13 +27,12 @@ const sampleBlocks = [
     sectionType: "EXPERIENCE",
     blockType: "experience-item",
     latexContent: `\\resumeExperienceHeading
-  {Full Stack Developer}{Jan 2024 -- Present}
-  {Startup Co.}{Remote}
-\\resumeItemListStart
-  \\resumeItem{Built responsive web applications using React, TypeScript, and Next.js serving 50K+ monthly users}
-  \\resumeItem{Designed and implemented PostgreSQL database schema, optimizing query performance by 60\\%}
-  \\resumeItem{Led code reviews and mentored 2 junior developers on best practices and design patterns}
-\\resumeItemListEnd`,
+      {Full Stack Developer | Startup Co., Remote}{Jan 2024 -- Present}{}
+      \\resumeItemListStart
+        \\resumeItem{Built responsive web applications using React, TypeScript, and Next.js serving 50K+ monthly users}
+        \\resumeItem{Designed and implemented PostgreSQL database schema, optimizing query performance by 60\\%}
+        \\resumeItem{Led code reviews and mentored 2 junior developers on best practices and design patterns}
+      \\resumeItemListEnd`,
     templateData: JSON.stringify({
       position: "Full Stack Developer",
       dates: "Jan 2024 -- Present",
@@ -67,12 +65,12 @@ const sampleBlocks = [
     sectionType: "PROJECTS",
     blockType: "project-item",
     latexContent: `\\resumeProjectHeading
-  {\\textbf{E-Commerce Platform} $|$ \\emph{React, Node.js, MongoDB, Stripe}}{2024}
-\\resumeItemListStart
-  \\resumeItem{Developed full-stack e-commerce application with user authentication, product catalog, and payment processing}
-  \\resumeItem{Implemented real-time inventory management system reducing overselling incidents by 95\\%}
-  \\resumeItem{Deployed on AWS using EC2, S3, and CloudFront achieving 99.9\\% uptime}
-\\resumeItemListEnd`,
+          {\\textbf{E-Commerce Platform} $|$ \\emph{React, Node.js, MongoDB, Stripe}}{}
+          \\resumeItemListStart
+            \\resumeItem{Developed full-stack e-commerce application with user authentication, product catalog, and payment processing}
+            \\resumeItem{Implemented real-time inventory management system reducing overselling incidents by 95\\%}
+            \\resumeItem{Deployed on AWS using EC2, S3, and CloudFront achieving 99.9\\% uptime}
+          \\resumeItemListEnd`,
     templateData: JSON.stringify({
       name: "E-Commerce Platform",
       technologies: "React, Node.js, MongoDB, Stripe",
@@ -85,12 +83,12 @@ const sampleBlocks = [
     sectionType: "PROJECTS",
     blockType: "project-item",
     latexContent: `\\resumeProjectHeading
-  {\\textbf{Sentiment Analysis Tool} $|$ \\emph{Python, TensorFlow, Flask, Docker}}{2023}
-\\resumeItemListStart
-  \\resumeItem{Built NLP model using BERT achieving 92\\% accuracy on sentiment classification tasks}
-  \\resumeItem{Created REST API with Flask for real-time inference, handling 1000+ requests per minute}
-  \\resumeItem{Containerized application with Docker and deployed to Google Cloud Run}
-\\resumeItemListEnd`,
+          {\\textbf{Sentiment Analysis Tool} $|$ \\emph{Python, TensorFlow, Flask, Docker}}{}
+          \\resumeItemListStart
+            \\resumeItem{Built NLP model using BERT achieving 92\\% accuracy on sentiment classification tasks}
+            \\resumeItem{Created REST API with Flask for real-time inference, handling 1000+ requests per minute}
+            \\resumeItem{Containerized application with Docker and deployed to Google Cloud Run}
+          \\resumeItemListEnd`,
     templateData: JSON.stringify({
       name: "Sentiment Analysis Tool",
       technologies: "Python, TensorFlow, Flask, Docker",
@@ -102,9 +100,11 @@ const sampleBlocks = [
     name: "Programming Languages",
     sectionType: "SKILLS",
     blockType: "skill-category",
-    latexContent: `\\textbf{Languages}{: Python, JavaScript, TypeScript, Java, C++, SQL, HTML/CSS} \\\\`,
+    latexContent: `\\small{\\item{
+    \\textbf{Programming Languages / Backend Technologies}: Python, JavaScript, TypeScript, Java, C++, SQL, HTML/CSS. \\\\
+    }}`,
     templateData: JSON.stringify({
-      category: "Languages",
+      category: "Programming Languages / Backend Technologies",
       skills: ["Python", "JavaScript", "TypeScript", "Java", "C++", "SQL", "HTML/CSS"],
     }),
     tags: JSON.stringify(["skills", "languages"]),
@@ -113,7 +113,9 @@ const sampleBlocks = [
     name: "Frameworks & Tools",
     sectionType: "SKILLS",
     blockType: "skill-category",
-    latexContent: `\\textbf{Frameworks}{: React, Next.js, Node.js, Express, FastAPI, Django, TensorFlow, PyTorch} \\\\`,
+    latexContent: `\\small{\\item{
+    \\textbf{Frameworks}: React, Next.js, Node.js, Express, FastAPI, Django, TensorFlow, PyTorch. \\\\
+    }}`,
     templateData: JSON.stringify({
       category: "Frameworks",
       skills: ["React", "Next.js", "Node.js", "Express", "FastAPI", "Django", "TensorFlow", "PyTorch"],
@@ -124,10 +126,12 @@ const sampleBlocks = [
     name: "Developer Tools",
     sectionType: "SKILLS",
     blockType: "skill-category",
-    latexContent: `\\textbf{Developer Tools}{: Git, Docker, Kubernetes, AWS, GCP, VS Code, Vim, Linux, CI/CD}`,
+    latexContent: `\\small{\\item{
+    \\textbf{Cloud \\& DevOps}: AWS (EC2, S3, Lambda), Docker, Kubernetes, Git, CI/CD.
+    }}`,
     templateData: JSON.stringify({
-      category: "Developer Tools",
-      skills: ["Git", "Docker", "Kubernetes", "AWS", "GCP", "VS Code", "Vim", "Linux", "CI/CD"],
+      category: "Cloud & DevOps",
+      skills: ["AWS (EC2, S3, Lambda)", "Docker", "Kubernetes", "Git", "CI/CD"],
     }),
     tags: JSON.stringify(["skills", "tools", "devops"]),
   },
@@ -135,7 +139,7 @@ const sampleBlocks = [
     name: "Hackathon Winner",
     sectionType: "ACHIEVEMENTS",
     blockType: "achievement-item",
-    latexContent: `\\resumeItem{\\textbf{1st Place} at University Hackathon 2023 - Built AI-powered accessibility tool for visually impaired users}`,
+    latexContent: `\\item \\textbf{1st Place} at University Hackathon 2023 - Built AI-powered accessibility tool for visually impaired users.`,
     templateData: JSON.stringify({
       title: "1st Place at University Hackathon 2023",
       description: "Built AI-powered accessibility tool for visually impaired users",
@@ -146,11 +150,11 @@ const sampleBlocks = [
     name: "AWS Certified",
     sectionType: "CERTIFICATIONS",
     blockType: "certification-item",
-    latexContent: `\\resumeItem{\\textbf{AWS Solutions Architect Associate} - Amazon Web Services (2024)}`,
+    latexContent: `\\item AWS Academy Graduate -- AWS Academy Machine Learning Foundations, AWS Academy Cloud Foundations.`,
     templateData: JSON.stringify({
-      name: "AWS Solutions Architect Associate",
+      name: "AWS Academy Graduate",
       issuer: "Amazon Web Services",
-      year: "2024",
+      courses: ["Machine Learning Foundations", "Cloud Foundations"],
     }),
     tags: JSON.stringify(["certification", "aws", "cloud"]),
   },

@@ -1,6 +1,40 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// Helper to sync ContentUsage table from structure JSON
+async function syncContentUsages(documentId: string, structure: string) {
+  const parsed = JSON.parse(structure) as {
+    sectionOrder: string[];
+    sections: Record<string, string[]>;
+  };
+
+  // Delete existing usages for this document
+  await prisma.contentUsage.deleteMany({
+    where: { documentId },
+  });
+
+  // Create new usages based on structure
+  const usages: { documentId: string; blockId: string; sectionType: string; order: number }[] = [];
+
+  for (const sectionType of parsed.sectionOrder) {
+    const blockIds = parsed.sections[sectionType] || [];
+    blockIds.forEach((blockId, index) => {
+      usages.push({
+        documentId,
+        blockId,
+        sectionType,
+        order: index,
+      });
+    });
+  }
+
+  if (usages.length > 0) {
+    await prisma.contentUsage.createMany({
+      data: usages,
+    });
+  }
+}
+
 // GET single document
 export async function GET(
   req: Request,
@@ -44,10 +78,59 @@ export async function PUT(
       },
     });
 
+    // Sync ContentUsage table if structure was updated
+    if (structure) {
+      await syncContentUsages(id, structure);
+    }
+
     return NextResponse.json(document);
   } catch (error) {
     console.error("Error updating document:", error);
     return NextResponse.json({ error: "Failed to update document" }, { status: 500 });
+  }
+}
+
+// PATCH update specific document fields (headerData, spacing)
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    const { headerData, spacing, preamble } = body;
+
+    // Validate at least one field is provided
+    if (headerData === undefined && spacing === undefined && preamble === undefined) {
+      return NextResponse.json(
+        { error: "At least one field (headerData, spacing, or preamble) is required" },
+        { status: 400 }
+      );
+    }
+
+    const updateData: Record<string, string> = {};
+
+    if (headerData !== undefined) {
+      updateData.headerData = typeof headerData === "string" ? headerData : JSON.stringify(headerData);
+    }
+
+    if (spacing !== undefined) {
+      updateData.spacing = typeof spacing === "string" ? spacing : JSON.stringify(spacing);
+    }
+
+    if (preamble !== undefined) {
+      updateData.preamble = preamble;
+    }
+
+    const document = await prisma.resumeDocument.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return NextResponse.json(document);
+  } catch (error) {
+    console.error("Error patching document:", error);
+    return NextResponse.json({ error: "Failed to update document settings" }, { status: 500 });
   }
 }
 

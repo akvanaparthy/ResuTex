@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { User } from "lucide-react";
 
 interface HeaderData {
   name: string;
@@ -50,95 +51,56 @@ export function HeaderSettingsModal({
     onOpenChange(false);
   };
 
+  const fields: { key: keyof HeaderData; label: string; placeholder: string; type?: string; span?: number }[] = [
+    { key: "name", label: "Full Name", placeholder: "John Doe", span: 2 },
+    { key: "email", label: "Email", placeholder: "john@example.com", type: "email" },
+    { key: "phone", label: "Phone", placeholder: "+1 (555) 123-4567" },
+    { key: "location", label: "Location", placeholder: "San Francisco, CA", span: 2 },
+    { key: "linkedin", label: "LinkedIn URL", placeholder: "https://linkedin.com/in/johndoe", span: 2 },
+    { key: "github", label: "GitHub URL", placeholder: "https://github.com/johndoe", span: 2 },
+    { key: "website", label: "Portfolio / Website", placeholder: "https://johndoe.dev", span: 2 },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg bg-background/95 backdrop-blur-xl border-border/60">
         <DialogHeader>
-          <DialogTitle>Resume Header Settings</DialogTitle>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <User className="h-4 w-4 text-primary" />
+            </div>
+            <DialogTitle className="text-base">Resume Header</DialogTitle>
+          </div>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleChange("name", e.target.value)}
-                placeholder="John Doe"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-                placeholder="john@example.com"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => handleChange("phone", e.target.value)}
-                placeholder="+1 (555) 123-4567"
-              />
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="location">Location</Label>
-              <Input
-                id="location"
-                value={formData.location}
-                onChange={(e) => handleChange("location", e.target.value)}
-                placeholder="San Francisco, CA"
-              />
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="linkedin">LinkedIn URL</Label>
-              <Input
-                id="linkedin"
-                value={formData.linkedin}
-                onChange={(e) => handleChange("linkedin", e.target.value)}
-                placeholder="https://linkedin.com/in/johndoe"
-              />
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="github">GitHub URL</Label>
-              <Input
-                id="github"
-                value={formData.github}
-                onChange={(e) => handleChange("github", e.target.value)}
-                placeholder="https://github.com/johndoe"
-              />
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="website">Portfolio/Website URL</Label>
-              <Input
-                id="website"
-                value={formData.website}
-                onChange={(e) => handleChange("website", e.target.value)}
-                placeholder="https://johndoe.dev"
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="pt-1">
+          <div className="grid grid-cols-2 gap-3">
+            {fields.map(({ key, label, placeholder, type, span }) => (
+              <div key={key} className={`space-y-1.5 ${span === 2 ? "col-span-2" : ""}`}>
+                <Label htmlFor={key} className="text-xs font-medium">{label}</Label>
+                <Input
+                  id={key}
+                  type={type || "text"}
+                  value={formData[key]}
+                  onChange={(e) => handleChange(key, e.target.value)}
+                  placeholder={placeholder}
+                  className="h-9 text-sm bg-muted/30 border-border/40 focus:bg-background"
+                />
+              </div>
+            ))}
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
+          <div className="flex justify-end gap-2 pt-5">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
+              className="h-8 text-xs border-border/40"
             >
               Cancel
             </Button>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" className="h-8 text-xs min-w-[110px]">
+              Save Changes
+            </Button>
           </div>
         </form>
       </DialogContent>

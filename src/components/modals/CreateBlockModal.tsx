@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 import { useBuilderStore } from "@/lib/store/builder-store";
 
 const SECTION_TYPES = [
@@ -55,8 +55,7 @@ export function CreateBlockModal({ open, onOpenChange }: CreateBlockModalProps) 
         blockType: "PLAIN",
         latexContent: latexContent.trim(),
       });
-      
-      // Reset form
+
       setName("");
       setLatexContent("");
       setSectionType("EXPERIENCE");
@@ -70,33 +69,41 @@ export function CreateBlockModal({ open, onOpenChange }: CreateBlockModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl bg-background/95 backdrop-blur-xl border-border/60">
         <DialogHeader>
-          <DialogTitle>Create New Block</DialogTitle>
-          <DialogDescription>
-            Create a reusable LaTeX content block for your resume.
-          </DialogDescription>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Plus className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <DialogTitle className="text-base">Create New Block</DialogTitle>
+              <DialogDescription className="text-xs mt-0.5">
+                Create a reusable LaTeX content block for your resume.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-2">
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Block Name</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="name" className="text-xs font-medium">Block Name</Label>
               <Input
                 id="name"
                 placeholder="e.g., Mavenwit Experience"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                className="h-9 text-sm bg-muted/30 border-border/40 focus:bg-background"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Section Type</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Section Type</Label>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between">
+                  <Button variant="outline" className="w-full justify-between h-9 text-sm border-border/40 bg-muted/30 hover:bg-muted/50">
                     {sectionType}
-                    <ChevronDown className="h-4 w-4 ml-2" />
+                    <ChevronDown className="h-3.5 w-3.5 ml-2 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-48">
@@ -113,8 +120,8 @@ export function CreateBlockModal({ open, onOpenChange }: CreateBlockModalProps) 
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="latex">LaTeX Content</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="latex" className="text-xs font-medium">LaTeX Content</Label>
             <Textarea
               id="latex"
               placeholder={`\\resumeExperienceHeading
@@ -122,23 +129,24 @@ export function CreateBlockModal({ open, onOpenChange }: CreateBlockModalProps) 
   \\resumeItemListStart
     \\resumeItem{Built awesome things}
   \\resumeItemListEnd`}
-              className="font-mono text-sm h-64"
+              className="font-mono text-xs h-56 bg-muted/30 border-border/40 focus:bg-background leading-relaxed resize-none"
               value={latexContent}
               onChange={(e) => setLatexContent(e.target.value)}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground">
               Enter raw LaTeX code for this content block. Use your resume template&apos;s custom commands.
             </p>
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs border-border/40">
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={!name.trim() || !latexContent.trim() || isSubmitting}
+            className="h-8 text-xs min-w-[110px]"
           >
             {isSubmitting ? "Creating..." : "Create Block"}
           </Button>

@@ -36,13 +36,13 @@ interface ResumeDocument {
 }
 
 const SECTION_TITLES: Record<string, string> = {
-  SUMMARY: "Summary",
-  EDUCATION: "Education",
-  EXPERIENCE: "Experience",
-  PROJECTS: "Projects",
-  SKILLS: "Technical Skills",
-  ACHIEVEMENTS: "Achievements",
-  CERTIFICATIONS: "Certifications",
+  SUMMARY: "SUMMARY",
+  EDUCATION: "EDUCATION",
+  EXPERIENCE: "RELEVANT EXPERIENCE",
+  PROJECTS: "KEY PROJECTS \\& PUBLICATIONS",
+  SKILLS: "SKILLS",
+  ACHIEVEMENTS: "ACHIEVEMENTS",
+  CERTIFICATIONS: "CERTIFICATIONS",
 };
 
 const SECTION_WRAPPERS: Record<string, { start: string; end: string }> = {
@@ -50,9 +50,20 @@ const SECTION_WRAPPERS: Record<string, { start: string; end: string }> = {
   EDUCATION: { start: "\\resumeSubHeadingListStart", end: "\\resumeSubHeadingListEnd" },
   EXPERIENCE: { start: "\\resumeSubHeadingListStart", end: "\\resumeSubHeadingListEnd" },
   PROJECTS: { start: "\\resumeSubHeadingListStart", end: "\\resumeSubHeadingListEnd" },
-  SKILLS: { start: "", end: "" },
-  ACHIEVEMENTS: { start: "\\begin{itemize}[leftmargin=0.15in]", end: "\\end{itemize}" },
-  CERTIFICATIONS: { start: "\\begin{itemize}[leftmargin=0.15in]", end: "\\end{itemize}" },
+  SKILLS: { start: "\\begin{itemize}[leftmargin=0.08in, label={}, itemsep=-3pt]", end: "\\end{itemize}" },
+  ACHIEVEMENTS: { start: "\\begin{itemize}[leftmargin=0.15in, itemsep=-3pt]", end: "\\end{itemize}" },
+  CERTIFICATIONS: { start: "\\begin{itemize}[leftmargin=0.15in, itemsep=-3pt]", end: "\\end{itemize}" },
+};
+
+// Per-section spacing after (matching sample resume exactly)
+const SECTION_POST_SPACING: Record<string, number> = {
+  SUMMARY: -8,
+  EDUCATION: 0, // resumeSubHeadingListEnd handles spacing
+  EXPERIENCE: 0,
+  PROJECTS: 0,
+  SKILLS: -10,
+  ACHIEVEMENTS: -10,
+  CERTIFICATIONS: 0,
 };
 
 function generateHeader(headerData: HeaderData): string {
@@ -60,39 +71,46 @@ function generateHeader(headerData: HeaderData): string {
 
   const lines: string[] = [];
 
-  // Name
+  // Name - 16pt bold centered (matching sample resume)
   lines.push(`\\begin{center}`);
-  lines.push(`\\textbf{\\Huge ${headerData.name}} \\\\ \\vspace{1pt}`);
+  lines.push(`{\\fontsize{16pt}{19pt}\\selectfont\\bfseries ${headerData.name}} \\\\ \\vspace{2pt}`);
 
-  // Contact line
+  // Contact line: phone | email | location
   const contactParts: string[] = [];
-  if (headerData.location) contactParts.push(headerData.location);
   if (headerData.phone) contactParts.push(headerData.phone);
   if (headerData.email) {
-    contactParts.push(`\\href{mailto:${headerData.email}}{\\color{linkblue}${headerData.email}}`);
+    contactParts.push(`\\href{mailto:${headerData.email}}{${headerData.email}}`);
   }
+  if (headerData.location) contactParts.push(headerData.location);
 
-  if (contactParts.length > 0) {
-    lines.push(`\\small ${contactParts.join(" $|$ ")} \\\\`);
-  }
-
-  // Links line
+  // Links line: LinkedIn | GitHub | Portfolio
   const linkParts: string[] = [];
   if (headerData.linkedin) {
-    linkParts.push(`\\href{${headerData.linkedin}}{\\color{linkblue}LinkedIn}`);
+    linkParts.push(`\\href{${headerData.linkedin}}{\\color{linkblue}\\underline{LinkedIn}}`);
   }
   if (headerData.github) {
-    linkParts.push(`\\href{${headerData.github}}{\\color{linkblue}GitHub}`);
+    linkParts.push(`\\href{${headerData.github}}{\\color{linkblue}\\underline{GitHub}}`);
   }
   if (headerData.website) {
-    linkParts.push(`\\href{${headerData.website}}{\\color{linkblue}Portfolio}`);
+    linkParts.push(`\\href{${headerData.website}}{\\color{linkblue}\\underline{Portfolio}}`);
   }
 
-  if (linkParts.length > 0) {
-    lines.push(`\\small ${linkParts.join(" $|$ ")}`);
+  // Combine contact and links on separate lines
+  if (contactParts.length > 0 || linkParts.length > 0) {
+    let contactLine = `{\\small `;
+    if (contactParts.length > 0) {
+      contactLine += contactParts.join(" | ");
+    }
+    if (linkParts.length > 0) {
+      if (contactParts.length > 0) contactLine += `\\\\  `;
+      contactLine += linkParts.join(" | ");
+    }
+    contactLine += `}`;
+    lines.push(contactLine);
   }
 
   lines.push(`\\end{center}`);
+  lines.push(`\\vspace{-8pt}`);
 
   return lines.join("\n");
 }
@@ -139,8 +157,8 @@ export function assembleLatex(
       const block = blocks.find((b) => b.id === blockIds[i]);
       if (block) {
         lines.push(block.latexContent);
-        // Add spacing between blocks (except last)
-        if (i < blockIds.length - 1 && spacing.block > 0) {
+        // Add spacing between blocks (except last) - only if positive value
+        if (i < blockIds.length - 1 && spacing.block !== 0) {
           lines.push(`\\vspace{${spacing.block}pt}`);
         }
       }
@@ -150,8 +168,11 @@ export function assembleLatex(
       lines.push(wrapper.end);
     }
 
-    // Add spacing after section
-    lines.push(`\\vspace{${spacing.section}pt}`);
+    // Add per-section post spacing (from sample resume) or fallback to global spacing
+    const postSpacing = SECTION_POST_SPACING[sectionType] ?? spacing.section;
+    if (postSpacing !== 0) {
+      lines.push(`\\vspace{${postSpacing}pt}`);
+    }
     lines.push("");
   }
 
