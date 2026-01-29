@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// ══════════════════════════════════════════════════
+// CONTENT BLOCK - The core reusable unit
+// ══════════════════════════════════════════════════
+model ContentBlock {
+  id            String         @id @default(cuid())
+  name          String         // "Mavenwit Experience v1"
+  sectionType   String         // EXPERIENCE, PROJECTS, etc.
+  blockType     String         // PLAIN or TEMPLATE
+  latexContent  String         // The actual LaTeX code
+  templateData  String?        // JSON string for structured data
+  tags          String         @default("[]") // JSON array for grouping
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  usages ContentUsage[]
+
+  @@map("content_blocks")
+}
+
+// ══════════════════════════════════════════════════
+// RESUME DOCUMENT - A specific resume configuration
+// ══════════════════════════════════════════════════
+model ResumeDocument {
+  id        String   @id @default(cuid())
+  name      String   @unique // "SWE Resume - Google"
+
+  // Structure stored as JSON string
+  // Format: { sectionOrder: ["EXPERIENCE", "PROJECTS"], sections: { "EXPERIENCE": ["id1", "id2"] } }
+  structure String @default("{\"sectionOrder\":[],\"sections\":{}}")
+
+  // Settings
+  preamble   String @default("")
+  headerData String @default("{}") // JSON: { name, email, phone, links }
+  spacing    String @default("{\"section\":8,\"block\":6,\"line\":1.0}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  usages ContentUsage[]
+
+  @@map("resume_documents")
+}
+
+// ══════════════════════════════════════════════════
+// CONTENT USAGE - Track which blocks are used where
+// ══════════════════════════════════════════════════
+model ContentUsage {
+  id          String @id @default(cuid())
+  documentId  String
+  blockId     String
+  sectionType String
+  order       Int
+
+  document ResumeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  block    ContentBlock   @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, blockId])
+  @@index([documentId, sectionType, order])
+  @@map("content_usages")
+}
