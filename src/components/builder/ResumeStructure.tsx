@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, GripVertical, MoreVertical, ChevronDown, ChevronRight, Trash2, Layers, Check, X, Repeat, Pencil, ArrowDownUp } from "lucide-react";
+import { Plus, GripVertical, ChevronDown, ChevronRight, Trash2, Layers, Check, X, Repeat, Pencil, ArrowDownUp } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -289,7 +289,31 @@ function SortableSection({
               <div className="flex-1 min-w-0">
                 <span className="text-sm font-medium">{sectionType}</span>
               </div>
-              <span className="text-[10px] text-muted-foreground tabular-nums">
+            </div>
+            <div className="flex items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStartEditing();
+                }}
+              >
+                <Pencil className="h-3 w-3 text-muted-foreground" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemoveSection();
+                }}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+              <span className="text-[10px] text-muted-foreground tabular-nums min-w-[1rem] text-center">
                 {blockCount}
               </span>
               {isExpanded ? (
@@ -298,27 +322,6 @@ function SortableSection({
                 <ChevronRight className="h-3.5 w-3.5 text-muted-foreground transition-transform" />
               )}
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <MoreVertical className="h-3.5 w-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleStartEditing}>
-                  <Pencil className="h-3.5 w-3.5 mr-2" />
-                  Rename Section
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={onRemoveSection}
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-2" />
-                  Remove Section
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </>
         )}
       </div>
