@@ -8,21 +8,40 @@ datasource db {
 }
 
 // ══════════════════════════════════════════════════
+// VARIANT GROUP - Groups related content blocks
+// (e.g., different versions of same experience)
+// ══════════════════════════════════════════════════
+model VariantGroup {
+  id        String   @id @default(cuid())
+  name      String   @unique // "Mavenwit Experience Variants"
+  color     String   @default("#3B82F6") // Hex color for UI highlighting
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  blocks ContentBlock[]
+
+  @@map("variant_groups")
+}
+
+// ══════════════════════════════════════════════════
 // CONTENT BLOCK - The core reusable unit
 // ══════════════════════════════════════════════════
 model ContentBlock {
-  id            String         @id @default(cuid())
-  name          String         // "Mavenwit Experience v1"
-  sectionType   String         // EXPERIENCE, PROJECTS, etc.
-  blockType     String         // PLAIN or TEMPLATE
-  latexContent  String         // The actual LaTeX code
-  templateData  String?        // JSON string for structured data
-  tags          String         @default("[]") // JSON array for grouping
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id             String        @id @default(cuid())
+  name           String        // "Mavenwit Experience v1"
+  sectionType    String        // EXPERIENCE, PROJECTS, etc.
+  blockType      String        // PLAIN or TEMPLATE
+  latexContent   String        // The actual LaTeX code
+  templateData   String?       // JSON string for structured data
+  tags           String        @default("[]") // JSON array for grouping
+  variantGroupId String?       // Optional: belongs to a variant group
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  usages ContentUsage[]
+  variantGroup VariantGroup? @relation(fields: [variantGroupId], references: [id], onDelete: SetNull)
+  usages       ContentUsage[]
 
+  @@index([variantGroupId])
   @@map("content_blocks")
 }
 

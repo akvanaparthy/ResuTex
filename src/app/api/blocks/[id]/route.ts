@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET single block
+// GET single block with variant group info
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -10,6 +10,15 @@ export async function GET(
     const { id } = await params;
     const block = await prisma.contentBlock.findUnique({
       where: { id },
+      include: {
+        variantGroup: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+          },
+        },
+      },
     });
 
     if (!block) {
@@ -34,7 +43,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await req.json();
-    const { name, sectionType, latexContent, templateData, tags } = body;
+    const { name, sectionType, latexContent, templateData, tags, variantGroupId } = body;
 
     const block = await prisma.contentBlock.update({
       where: { id },
@@ -44,6 +53,17 @@ export async function PUT(
         latexContent,
         templateData: templateData ? JSON.stringify(templateData) : null,
         tags: tags ? JSON.stringify(tags) : undefined,
+        // Allow setting variantGroupId to null or a valid id
+        ...(variantGroupId !== undefined && { variantGroupId }),
+      },
+      include: {
+        variantGroup: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+          },
+        },
       },
     });
 
@@ -54,6 +74,68 @@ export async function PUT(
   } catch (error) {
     console.error("Error updating block:", error);
     return NextResponse.json({ error: "Failed to update block" }, { status: 500 });
+  }
+}
+
+// PATCH - Assign/remove block to/from variant group
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    const { variantGroupId } = body;
+
+    // Verify block exists
+    const existingBlock = await prisma.contentBlock.findUnique({
+      where: { id },
+    });
+
+    if (!existingBlock) {
+      return NextResponse.json({ error: "Block not found" }, { status: 404 });
+    }
+
+    // If variantGroupId provided, verify it exists
+    if (variantGroupId) {
+      const variantGroup = await prisma.variantGroup.findUnique({
+        where: { id: variantGroupId },
+      });
+
+      if (!variantGroup) {
+        return NextResponse.json(
+          { error: "Variant group not found" },
+          { status: 404 }
+        );
+      }
+    }
+
+    const block = await prisma.contentBlock.update({
+      where: { id },
+      data: {
+        variantGroupId: variantGroupId || null,
+      },
+      include: {
+        variantGroup: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({
+      ...block,
+      tags: JSON.parse(block.tags),
+    });
+  } catch (error) {
+    console.error("Error updating block variant group:", error);
+    return NextResponse.json(
+      { error: "Failed to update block variant group" },
+      { status: 500 }
+    );
   }
 }
 

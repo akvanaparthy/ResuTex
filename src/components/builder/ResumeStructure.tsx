@@ -4,14 +4,16 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, GripVertical, MoreVertical, ChevronDown, ChevronRight, Trash2, Layers, Check, X } from "lucide-react";
+import { Plus, GripVertical, MoreVertical, ChevronDown, ChevronRight, Trash2, Layers, Check, X, Repeat } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useBuilderStore } from "@/lib/store/builder-store";
+import { useBuilderStore, type ContentBlock } from "@/lib/store/builder-store";
+import { SwapVariantModal } from "@/components/modals/SwapVariantModal";
 import {
   DndContext,
   closestCenter,
@@ -51,13 +53,13 @@ const getSectionIcon = (sectionType: string): string => {
 };
 
 interface SortableBlockItemProps {
-  blockId: string;
-  blockName: string;
+  block: ContentBlock;
   sectionType: string;
   onRemove: () => void;
+  onSwapVariant?: (block: ContentBlock) => void;
 }
 
-function SortableBlockItem({ blockId, blockName, sectionType, onRemove }: SortableBlockItemProps) {
+function SortableBlockItem({ block, sectionType, onRemove, onSwapVariant }: SortableBlockItemProps) {
   const {
     attributes,
     listeners,
@@ -65,13 +67,15 @@ function SortableBlockItem({ blockId, blockName, sectionType, onRemove }: Sortab
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: blockId });
+  } = useSortable({ id: block.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+
+  const hasVariantGroup = block.variantGroupId && block.variantGroup;
 
   return (
     <div
@@ -82,16 +86,55 @@ function SortableBlockItem({ blockId, blockName, sectionType, onRemove }: Sortab
       <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
         <GripVertical className="h-3 w-3 text-muted-foreground/30 group-hover/item:text-muted-foreground/60 transition-colors" />
       </div>
-      <div className="w-1 h-4 rounded-full bg-primary/20 flex-shrink-0" />
-      <span className="text-sm flex-1 truncate text-foreground/80">{blockName}</span>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-5 w-5 opacity-0 group-hover/item:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-        onClick={onRemove}
-      >
-        <Trash2 className="h-3 w-3" />
-      </Button>
+      {hasVariantGroup ? (
+        <div
+          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+          style={{ backgroundColor: block.variantGroup!.color }}
+        />
+      ) : (
+        <div className="w-1 h-4 rounded-full bg-primary/20 flex-shrink-0" />
+      )}
+      <span className="text-sm flex-1 truncate text-foreground/80">{block.name}</span>
+      <div className="flex items-center gap-0.5">
+        {hasVariantGroup && onSwapVariant && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 opacity-0 group-hover/item:opacity-100 transition-opacity text-muted-foreground"
+                title="Swap Variant"
+              >
+                <Repeat className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onSwapVariant(block)}>
+                <Repeat className="h-3.5 w-3.5 mr-2" />
+                Swap Variant
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={onRemove}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-2" />
+                Remove from Resume
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        {!hasVariantGroup && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 opacity-0 group-hover/item:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+            onClick={onRemove}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -104,8 +147,9 @@ interface SortableSectionProps {
   onToggle: () => void;
   onRemoveSection: () => void;
   onRemoveBlock: (blockId: string) => void;
-  blocks: Array<{ id: string; name: string }>;
+  blocks: ContentBlock[];
   onReorderBlocks: (blockIds: string[]) => void;
+  onSwapVariant?: (block: ContentBlock) => void;
 }
 
 function SortableSection({
@@ -118,6 +162,7 @@ function SortableSection({
   onRemoveBlock,
   blocks,
   onReorderBlocks,
+  onSwapVariant,
 }: SortableSectionProps) {
   const {
     attributes,
@@ -229,10 +274,10 @@ function SortableSection({
                     return (
                       <SortableBlockItem
                         key={blockId}
-                        blockId={blockId}
-                        blockName={block.name}
+                        block={block}
                         sectionType={sectionType}
                         onRemove={() => onRemoveBlock(blockId)}
+                        onSwapVariant={onSwapVariant}
                       />
                     );
                   })}
@@ -251,6 +296,8 @@ export function ResumeStructure() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(structure.sectionOrder));
   const [isAddingCustom, setIsAddingCustom] = useState(false);
   const [customSectionName, setCustomSectionName] = useState("");
+  const [swapModalOpen, setSwapModalOpen] = useState(false);
+  const [selectedBlockForSwap, setSelectedBlockForSwap] = useState<ContentBlock | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -300,6 +347,11 @@ export function ResumeStructure() {
       const newOrder = arrayMove(structure.sectionOrder, oldIndex, newIndex);
       reorderSections(newOrder);
     }
+  };
+
+  const handleSwapVariant = (block: ContentBlock) => {
+    setSelectedBlockForSwap(block);
+    setSwapModalOpen(true);
   };
 
   return (
@@ -358,6 +410,7 @@ export function ResumeStructure() {
                         onRemoveBlock={(blockId) => removeBlockFromSection(blockId, sectionType)}
                         blocks={blocks}
                         onReorderBlocks={(newOrder) => reorderBlocksInSection(sectionType, newOrder)}
+                        onSwapVariant={handleSwapVariant}
                       />
                     </div>
                   );
@@ -434,6 +487,12 @@ export function ResumeStructure() {
           </DropdownMenu>
         )}
       </div>
+
+      <SwapVariantModal
+        open={swapModalOpen}
+        onOpenChange={setSwapModalOpen}
+        currentBlock={selectedBlockForSwap}
+      />
     </div>
   );
 }

@@ -1,5 +1,11 @@
 import { create } from "zustand";
 
+export interface VariantGroup {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface ContentBlock {
   id: string;
   name: string;
@@ -8,6 +14,8 @@ export interface ContentBlock {
   latexContent: string;
   templateData?: string;
   tags: string[];
+  variantGroupId?: string | null;
+  variantGroup?: VariantGroup | null;
 }
 
 export interface ResumeStructure {
@@ -21,6 +29,7 @@ interface BuilderState {
   structure: ResumeStructure;
   documentId: string | null;
   documentName: string;
+  variantGroups: VariantGroup[];
 
   // Compilation state
   isCompiling: boolean;
@@ -36,10 +45,17 @@ interface BuilderState {
   setStructure: (structure: ResumeStructure) => void;
   addSection: (sectionType: string) => void;
   removeSection: (sectionType: string) => void;
-  addBlockToSection: (blockId: string, sectionType: string) => void;
+  addBlockToSection: (blockId: string, sectionType: string) => Promise<boolean>;
   removeBlockFromSection: (blockId: string, sectionType: string) => void;
   reorderBlocksInSection: (sectionType: string, blockIds: string[]) => void;
   reorderSections: (sectionOrder: string[]) => void;
+
+  // Actions - Variant Groups
+  loadVariantGroups: () => Promise<void>;
+  addBlockToVariantGroup: (blockId: string, groupId: string) => Promise<void>;
+  removeBlockFromVariantGroup: (blockId: string) => Promise<void>;
+  swapVariant: (oldBlockId: string, newBlockId: string) => Promise<void>;
+  validateVariantConflict: (blockId: string) => Promise<{ hasConflict: boolean; conflictingBlock?: ContentBlock }>;
 
   // Actions - Compilation
   compile: () => Promise<void>;
@@ -58,6 +74,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   },
   documentId: null,
   documentName: "My Resume",
+  variantGroups: [],
   isCompiling: false,
   pdfUrl: null,
   error: null,
@@ -142,7 +159,15 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     get().saveDocument();
   },
 
-  addBlockToSection: (blockId, sectionType) => {
+  addBlockToSection: async (blockId, sectionType) => {
+    // Validate variant conflict first
+    const { hasConflict, conflictingBlock } = await get().validateVariantConflict(blockId);
+
+    if (hasConflict) {
+      // Return false to indicate conflict - caller should handle UI
+      return false;
+    }
+
     set((state) => {
       const currentBlocks = state.structure.sections[sectionType] || [];
       if (currentBlocks.includes(blockId)) return state;
@@ -158,6 +183,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       };
     });
     get().saveDocument();
+    return true;
   },
 
   removeBlockFromSection: (blockId, sectionType) => {
@@ -283,6 +309,9 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
           structure: JSON.parse(newDoc.structure),
         });
       }
+
+      // Load variant groups
+      await get().loadVariantGroups();
     } catch (error) {
       console.error("Error loading document:", error);
     }
@@ -303,6 +332,133 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       });
     } catch (error) {
       console.error("Error saving document:", error);
+    }
+  },
+
+  // Variant group actions
+  loadVariantGroups: async () => {
+    try {
+      const response = await fetch("/api/variant-groups");
+      if (!response.ok) throw new Error("Failed to load variant groups");
+      const groups = await response.json();
+      set({ variantGroups: groups });
+    } catch (error) {
+      console.error("Error loading variant groups:", error);
+    }
+  },
+
+  addBlockToVariantGroup: async (blockId, groupId) => {
+    try {
+      const response = await fetch(`/api/blocks/${blockId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variantGroupId: groupId }),
+      });
+
+      if (!response.ok) throw new Error("Failed to add block to variant group");
+
+      const updatedBlock = await response.json();
+
+      set((state) => ({
+        blocks: state.blocks.map((b) => (b.id === blockId ? updatedBlock : b)),
+      }));
+
+      // Reload groups to get updated block lists
+      await get().loadVariantGroups();
+    } catch (error) {
+      console.error("Error adding block to variant group:", error);
+      throw error;
+    }
+  },
+
+  removeBlockFromVariantGroup: async (blockId) => {
+    try {
+      const response = await fetch(`/api/blocks/${blockId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variantGroupId: null }),
+      });
+
+      if (!response.ok) throw new Error("Failed to remove block from variant group");
+
+      const updatedBlock = await response.json();
+
+      set((state) => ({
+        blocks: state.blocks.map((b) => (b.id === blockId ? updatedBlock : b)),
+      }));
+
+      await get().loadVariantGroups();
+    } catch (error) {
+      console.error("Error removing block from variant group:", error);
+      throw error;
+    }
+  },
+
+  swapVariant: async (oldBlockId, newBlockId) => {
+    const state = get();
+    if (!state.documentId) return;
+
+    try {
+      const response = await fetch("/api/swap-variant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          documentId: state.documentId,
+          oldBlockId,
+          newBlockId,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to swap variant");
+
+      // Update local state - find old block and replace with new
+      const oldBlock = state.blocks.find((b) => b.id === oldBlockId);
+      if (!oldBlock) return;
+
+      set((state) => {
+        const newStructure = { ...state.structure };
+        Object.keys(newStructure.sections).forEach((sectionType) => {
+          newStructure.sections[sectionType] = newStructure.sections[sectionType].map(
+            (id) => (id === oldBlockId ? newBlockId : id)
+          );
+        });
+
+        return { structure: newStructure };
+      });
+
+      await get().saveDocument();
+    } catch (error) {
+      console.error("Error swapping variant:", error);
+      throw error;
+    }
+  },
+
+  validateVariantConflict: async (blockId) => {
+    const state = get();
+    if (!state.documentId) return { hasConflict: false };
+
+    try {
+      const response = await fetch("/api/validate-variants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          documentId: state.documentId,
+          blockId,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        if (data.conflict) {
+          const conflictingBlock = state.blocks.find((b) => b.id === data.conflictingBlockId);
+          return { hasConflict: true, conflictingBlock };
+        }
+      }
+
+      return { hasConflict: false };
+    } catch (error) {
+      console.error("Error validating variant conflict:", error);
+      return { hasConflict: false };
     }
   },
 }));

@@ -134,19 +134,22 @@ export default function BuilderPage() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel */}
-        <div className="w-[480px] min-w-[380px] flex flex-col border-r border-border/60 bg-background">
-          <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden grid grid-cols-[35%_1fr] gap-0">
+        {/* Left Side */}
+        <div className="h-full overflow-hidden grid grid-rows-2 gap-0">
+          {/* Resume Structure */}
+          <div className="overflow-hidden border-r border-border/60">
             <ResumeStructure />
           </div>
-          <div className="h-[45%] min-h-[200px] border-t border-border/60 overflow-hidden">
+
+          {/* Block Library */}
+          <div className="overflow-hidden border-r border-t border-border/60">
             <BlockLibrary />
           </div>
         </div>
 
-        {/* Right Panel */}
-        <div className="flex-1 min-w-0">
+        {/* Right Side - PDF Preview */}
+        <div className="h-full overflow-hidden">
           <PdfPreview />
         </div>
       </div>

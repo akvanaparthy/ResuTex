@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET all blocks
+// GET all blocks with variant group info
 export async function GET() {
   try {
     const blocks = await prisma.contentBlock.findMany({
+      include: {
+        variantGroup: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
     });
 
@@ -25,7 +34,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, sectionType, blockType, latexContent, templateData, tags } = body;
+    const { name, sectionType, blockType, latexContent, templateData, tags, variantGroupId } = body;
 
     const block = await prisma.contentBlock.create({
       data: {
@@ -35,6 +44,16 @@ export async function POST(req: Request) {
         latexContent,
         templateData: templateData ? JSON.stringify(templateData) : null,
         tags: JSON.stringify(tags || []),
+        variantGroupId: variantGroupId || null,
+      },
+      include: {
+        variantGroup: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+          },
+        },
       },
     });
 

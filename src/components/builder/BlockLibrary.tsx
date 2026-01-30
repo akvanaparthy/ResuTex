@@ -6,21 +6,27 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Search, FileText, BookOpen, Check, Trash2, MoreVertical } from "lucide-react";
+import { Plus, Search, FileText, BookOpen, Check, Trash2, MoreVertical, Palette, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useBuilderStore } from "@/lib/store/builder-store";
 import { CreateBlockModal } from "@/components/modals/CreateBlockModal";
+import { VariantGroupModal } from "@/components/modals/VariantGroupModal";
+import { useToast } from "@/hooks/use-toast";
 
 export function BlockLibrary() {
-  const { blocks, structure, addBlockToSection, removeBlock } = useBuilderStore();
+  const { blocks, structure, addBlockToSection, removeBlock, removeBlockFromVariantGroup } = useBuilderStore();
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("ALL");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [variantModalOpen, setVariantModalOpen] = useState(false);
+  const [selectedBlockForVariant, setSelectedBlockForVariant] = useState<string | null>(null);
 
   // Get unique section types from blocks
   const uniqueSectionTypes = Array.from(new Set(blocks.map((b) => b.sectionType))).sort();
@@ -32,15 +38,46 @@ export function BlockLibrary() {
     return matchesSearch && matchesFilter;
   });
 
-  const handleAddBlock = (blockId: string, sectionType: string) => {
+  const handleAddBlock = async (blockId: string, sectionType: string) => {
     if (structure.sectionOrder.includes(sectionType)) {
-      addBlockToSection(blockId, sectionType);
+      const success = await addBlockToSection(blockId, sectionType);
+      if (!success) {
+        // Conflict detected - handled by ResumeStructure
+        toast({
+          title: "Variant Conflict",
+          description: "Another block from this variant group is already in the resume.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const handleDeleteBlock = async (blockId: string) => {
     if (confirm("Delete this block? This cannot be undone.")) {
       await removeBlock(blockId);
+    }
+  };
+
+  const handleAddToVariantGroup = (blockId: string) => {
+    setSelectedBlockForVariant(blockId);
+    setVariantModalOpen(true);
+  };
+
+  const handleRemoveFromVariantGroup = async (blockId: string) => {
+    if (confirm("Remove this block from its variant group?")) {
+      try {
+        await removeBlockFromVariantGroup(blockId);
+        toast({
+          title: "Removed from Group",
+          description: "Block removed from variant group.",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to remove block from variant group.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -111,13 +148,32 @@ export function BlockLibrary() {
                       className={`group cursor-pointer transition-all duration-200 animate-fade-in-up border-border/40 hover:border-border hover:shadow-sm ${
                         isInResume ? "border-primary/25 bg-primary/[0.03]" : "bg-card/60"
                       }`}
-                      style={{ animationDelay: `${index * 30}ms` }}
+                      style={{
+                        animationDelay: `${index * 30}ms`,
+                        ...(block.variantGroupId && block.variantGroup
+                          ? { borderLeft: `3px solid ${block.variantGroup.color}` }
+                          : {}),
+                      }}
                     >
                       <CardContent className="p-3">
                         <div className="space-y-2">
                           <div className="flex items-start justify-between gap-1.5">
                             <div className="min-w-0 flex-1">
                               <p className="font-medium text-sm truncate leading-tight">{block.name}</p>
+                              {block.variantGroupId && block.variantGroup && (
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <div
+                                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                    style={{ backgroundColor: block.variantGroup.color }}
+                                  />
+                                  <span
+                                    className="text-[10px] font-medium truncate"
+                                    style={{ color: block.variantGroup.color }}
+                                  >
+                                    {block.variantGroup.name}
+                                  </span>
+                                </div>
+                              )}
                               <p className="text-xs text-muted-foreground mt-0.5">{block.sectionType}</p>
                             </div>
                             <div className="flex items-center gap-1">
@@ -137,6 +193,18 @@ export function BlockLibrary() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
+                                  {block.variantGroupId ? (
+                                    <DropdownMenuItem onClick={() => handleRemoveFromVariantGroup(block.id)}>
+                                      <X className="h-3.5 w-3.5 mr-2" />
+                                      Remove from Variant Group
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem onClick={() => handleAddToVariantGroup(block.id)}>
+                                      <Palette className="h-3.5 w-3.5 mr-2" />
+                                      Add to Variant Group
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuSeparator />
                                   <DropdownMenuItem
                                     className="text-destructive focus:text-destructive"
                                     onClick={() => handleDeleteBlock(block.id)}
@@ -172,6 +240,11 @@ export function BlockLibrary() {
       </Tabs>
 
       <CreateBlockModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+      <VariantGroupModal
+        open={variantModalOpen}
+        onOpenChange={setVariantModalOpen}
+        blockId={selectedBlockForVariant}
+      />
     </div>
   );
 }
