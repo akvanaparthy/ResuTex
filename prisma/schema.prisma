@@ -35,14 +35,27 @@ model ContentBlock {
   templateData   String?       // JSON string for structured data
   tags           String        @default("[]") // JSON array for grouping
   variantGroupId String?       // Optional: belongs to a variant group
+  documentId     String?       // Optional: if null = shared, if set = belongs to specific document
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
   variantGroup VariantGroup? @relation(fields: [variantGroupId], references: [id], onDelete: SetNull)
+  document     ResumeDocument? @relation(fields: [documentId], references: [id], onDelete: Cascade)
   usages       ContentUsage[]
 
   @@index([variantGroupId])
+  @@index([documentId])
   @@map("content_blocks")
+}
+
+// ══════════════════════════════════════════════════
+// APP SETTINGS - Global application settings
+// ══════════════════════════════════════════════════
+model AppSettings {
+  id           String  @id @default("default")
+  sharedBlocks Boolean @default(true) // If true, blocks are shared across all documents
+
+  @@map("app_settings")
 }
 
 // ══════════════════════════════════════════════════
@@ -65,6 +78,7 @@ model ResumeDocument {
   updatedAt DateTime @updatedAt
 
   usages ContentUsage[]
+  blocks ContentBlock[]
 
   @@map("resume_documents")
 }

@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Download, FileText, Layers, Plus, Check } from "lucide-react";
+import { Upload, Download, FileText, Layers, Plus, Check, Database } from "lucide-react";
 import { useBuilderStore, type ResumeDocument, type ContentBlock } from "@/lib/store/builder-store";
 import { useToast } from "@/hooks/use-toast";
 
@@ -38,9 +38,11 @@ export function ImportExportModal({ open, onOpenChange, defaultTab = "export" }:
     documentName,
     structure,
     blocks,
+    settings,
     createDocument,
     switchDocument,
     loadDocument,
+    loadBlocks,
   } = useBuilderStore();
   const { toast } = useToast();
 
@@ -65,6 +67,11 @@ export function ImportExportModal({ open, onOpenChange, defaultTab = "export" }:
 
   // Other documents (excluding current)
   const otherDocuments = documents.filter((d) => d.id !== documentId);
+  
+  // Get blocks for current document (when isolated mode)
+  const currentDocBlocks = settings.sharedBlocks 
+    ? blocks 
+    : blocks.filter((b) => b.documentId === documentId || !b.documentId);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -74,13 +81,13 @@ export function ImportExportModal({ open, onOpenChange, defaultTab = "export" }:
       setExportTargetDocId(otherDocuments[0]?.id || "");
       setExportNewDocName("");
       setExportStructure(true);
-      setExportBlocks(true);
+      setExportBlocks(!settings.sharedBlocks); // Auto-check blocks when isolated
       setImportSourceDocId(otherDocuments[0]?.id || "");
       setImportStructure(true);
-      setImportBlocks(true);
+      setImportBlocks(!settings.sharedBlocks); // Auto-check blocks when isolated
       setSourceDocData(null);
     }
-  }, [open, defaultTab, otherDocuments]);
+  }, [open, defaultTab, otherDocuments.length, settings.sharedBlocks]);
 
   // Load source document data for import preview
   useEffect(() => {
@@ -95,9 +102,21 @@ export function ImportExportModal({ open, onOpenChange, defaultTab = "export" }:
         if (response.ok) {
           const doc = await response.json();
           const parsedStructure = JSON.parse(doc.structure);
+          
+          // Load blocks for source document if in isolated mode
+          let sourceBlocks: ContentBlock[] = [];
+          if (!settings.sharedBlocks) {
+            const blocksRes = await fetch(`/api/blocks?documentId=${importSourceDocId}&sharedBlocks=false`);
+            if (blocksRes.ok) {
+              sourceBlocks = await blocksRes.json();
+              // Filter to only blocks belonging to that document
+              sourceBlocks = sourceBlocks.filter((b) => b.documentId === importSourceDocId);
+            }
+          }
+          
           setSourceDocData({
             structure: { sectionOrder: parsedStructure.sectionOrder || [] },
-            blocks: [], // We'll use the global blocks since they're shared
+            blocks: sourceBlocks,
           });
         }
       } catch (error) {
@@ -106,7 +125,7 @@ export function ImportExportModal({ open, onOpenChange, defaultTab = "export" }:
     };
 
     loadSourceData();
-  }, [importSourceDocId, activeTab]);
+  }, [importSourceDocId, activeTab, settings.sharedBlocks]);
 
   const handleExport = async () => {
     if (!exportStructure && !exportBlocks) {
@@ -185,11 +204,35 @@ export function ImportExportModal({ open, onOpenChange, defaultTab = "export" }:
         }),
       });
 
-      // Note: Blocks are already shared across all documents in the library
+      // Copy blocks if in isolated mode and blocks is selected
+      let blocksCopied = 0;
+      if (exportBlocks && !settings.sharedBlocks) {
+        // Get blocks that belong to current document
+        const blocksToExport = currentDocBlocks.filter((b) => b.documentId === documentId);
+        if (blocksToExport.length > 0) {
+          const copyRes = await fetch("/api/blocks/copy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              blockIds: blocksToExport.map((b) => b.id),
+              targetDocumentId: targetDocId,
+            }),
+          });
+          if (copyRes.ok) {
+            const result = await copyRes.json();
+            blocksCopied = result.copied;
+          }
+        }
+      }
+
+      const exportedItems = [];
+      if (exportStructure) exportedItems.push("structure");
+      if (exportBlocks && blocksCopied > 0) exportedItems.push(`${blocksCopied} blocks`);
+      else if (exportBlocks && settings.sharedBlocks) exportedItems.push("blocks (already shared)");
 
       toast({
         title: "Export Successful",
-        description: `${exportStructure ? "Structure" : ""}${exportStructure && exportBlocks ? " and " : ""}${exportBlocks ? "Blocks" : ""} exported successfully.`,
+        description: `Exported ${exportedItems.join(" and ")} successfully.`,
       });
 
       onOpenChange(false);
@@ -270,12 +313,40 @@ export function ImportExportModal({ open, onOpenChange, defaultTab = "export" }:
         }),
       });
 
+      // Copy blocks if in isolated mode and blocks is selected
+      let blocksCopied = 0;
+      if (importBlocks && !settings.sharedBlocks && sourceDocData?.blocks) {
+        const blocksToImport = sourceDocData.blocks;
+        if (blocksToImport.length > 0) {
+          const copyRes = await fetch("/api/blocks/copy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              blockIds: blocksToImport.map((b) => b.id),
+              targetDocumentId: documentId,
+            }),
+          });
+          if (copyRes.ok) {
+            const result = await copyRes.json();
+            blocksCopied = result.copied;
+          }
+        }
+      }
+
       // Reload the current document to reflect changes
       await loadDocument(documentId!);
+      
+      // Also reload blocks
+      await loadBlocks();
+
+      const importedItems = [];
+      if (importStructure) importedItems.push("structure");
+      if (importBlocks && blocksCopied > 0) importedItems.push(`${blocksCopied} blocks`);
+      else if (importBlocks && settings.sharedBlocks) importedItems.push("blocks (already shared)");
 
       toast({
         title: "Import Successful",
-        description: `${importStructure ? "Structure" : ""}${importStructure && importBlocks ? " and " : ""}${importBlocks ? "Blocks" : ""} imported successfully.`,
+        description: `Imported ${importedItems.join(" and ")} successfully.`,
       });
 
       onOpenChange(false);
@@ -347,12 +418,26 @@ export function ImportExportModal({ open, onOpenChange, defaultTab = "export" }:
                   />
                   <label htmlFor="export-blocks" className="text-sm flex items-center gap-2">
                     <FileText className="h-4 w-4 text-muted-foreground" />
-                    Block Library ({blocks.length} blocks)
-                    <span className="text-xs text-muted-foreground">(shared across all documents)</span>
+                    Block Library ({currentDocBlocks.filter((b) => b.documentId === documentId).length} blocks)
+                    {settings.sharedBlocks ? (
+                      <span className="text-xs text-muted-foreground">(already shared globally)</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">(will copy to destination)</span>
+                    )}
                   </label>
                 </div>
               </div>
             </div>
+
+            {/* Mode indicator */}
+            {!settings.sharedBlocks && (
+              <div className="p-2 rounded-md bg-orange-500/10 border border-orange-500/20">
+                <p className="text-xs text-orange-600 dark:text-orange-400 flex items-center gap-2">
+                  <Database className="h-3.5 w-3.5" />
+                  Isolated mode: Blocks will be copied to the destination document.
+                </p>
+              </div>
+            )}
 
             {/* Destination */}
             <div className="space-y-3">
@@ -482,15 +567,32 @@ export function ImportExportModal({ open, onOpenChange, defaultTab = "export" }:
                     id="import-blocks"
                     checked={importBlocks}
                     onCheckedChange={(checked) => setImportBlocks(checked as boolean)}
+                    disabled={settings.sharedBlocks}
                   />
                   <label htmlFor="import-blocks" className="text-sm flex items-center gap-2">
                     <FileText className="h-4 w-4 text-muted-foreground" />
                     Block Library
-                    <span className="text-xs text-muted-foreground">(already shared across all documents)</span>
+                    {settings.sharedBlocks ? (
+                      <span className="text-xs text-muted-foreground">(already shared globally)</span>
+                    ) : sourceDocData?.blocks ? (
+                      <span className="text-xs text-muted-foreground">({sourceDocData.blocks.length} blocks to copy)</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">(will copy from source)</span>
+                    )}
                   </label>
                 </div>
               </div>
             </div>
+
+            {/* Mode indicator for import */}
+            {!settings.sharedBlocks && sourceDocData?.blocks && sourceDocData.blocks.length > 0 && (
+              <div className="p-2 rounded-md bg-orange-500/10 border border-orange-500/20">
+                <p className="text-xs text-orange-600 dark:text-orange-400 flex items-center gap-2">
+                  <Database className="h-3.5 w-3.5" />
+                  Isolated mode: {sourceDocData.blocks.length} blocks will be copied to this document.
+                </p>
+              </div>
+            )}
 
             {/* Preview */}
             {sourceDocData && importStructure && sourceDocData.structure.sectionOrder.length > 0 && (

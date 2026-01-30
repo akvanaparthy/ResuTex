@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ResumeStructure } from "@/components/builder/ResumeStructure";
 import { BlockLibrary } from "@/components/builder/BlockLibrary";
 import { PdfPreview } from "@/components/builder/PdfPreview";
 import { DocumentSelector } from "@/components/builder/DocumentSelector";
+import { SettingsModal } from "@/components/modals/SettingsModal";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,7 +13,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Download, FileText, ChevronDown, Sun, Moon, Monitor } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Download, FileText, ChevronDown, Sun, Moon, Monitor, Settings } from "lucide-react";
 import { useBuilderStore } from "@/lib/store/builder-store";
 import { useTheme } from "@/components/ThemeProvider";
 
@@ -52,6 +59,7 @@ function ThemeToggle() {
 
 export default function BuilderPage() {
   const { loadDocument, pdfUrl, compile } = useBuilderStore();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     loadDocument();
@@ -111,6 +119,23 @@ export default function BuilderPage() {
 
         <div className="flex items-center gap-1.5">
           <ThemeToggle />
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  onClick={() => setSettingsOpen(true)}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Settings</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <div className="h-4 w-px bg-border/60 mx-1" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -154,6 +179,9 @@ export default function BuilderPage() {
           <PdfPreview />
         </div>
       </div>
+
+      {/* Settings Modal */}
+      <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 }

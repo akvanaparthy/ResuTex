@@ -16,6 +16,7 @@ export interface ContentBlock {
   tags: string[];
   variantGroupId?: string | null;
   variantGroup?: VariantGroup | null;
+  documentId?: string | null;
 }
 
 export interface ResumeStructure {
@@ -35,6 +36,10 @@ export interface ResumeDocument {
   updatedAt: string;
 }
 
+export interface AppSettings {
+  sharedBlocks: boolean;
+}
+
 interface BuilderState {
   // Data
   blocks: ContentBlock[];
@@ -47,6 +52,9 @@ interface BuilderState {
   
   // Documents list
   documents: ResumeDocument[];
+  
+  // App settings
+  settings: AppSettings;
 
   // Compilation state
   isCompiling: boolean;
@@ -93,9 +101,14 @@ interface BuilderState {
   deleteDocument: (documentId: string) => Promise<void>;
   renameDocument: (name: string) => Promise<void>;
   switchDocument: (documentId: string) => Promise<void>;
+  
+  // Actions - Settings
+  loadSettings: () => Promise<void>;
+  setSharedBlocks: (shared: boolean) => Promise<void>;
 
   // Actions - Persistence
   loadDocument: (documentId?: string) => Promise<void>;
+  loadBlocks: () => Promise<void>;
   saveDocument: () => Promise<void>;
 }
 
@@ -112,6 +125,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   spacing: { section: -8, block: -6, line: 1.0 },
   variantGroups: [],
   documents: [],
+  settings: { sharedBlocks: true },
   isCompiling: false,
   pdfUrl: null,
   error: null,
@@ -121,10 +135,15 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
   addBlock: async (blockData) => {
     try {
+      const state = get();
       const response = await fetch("/api/blocks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(blockData),
+        body: JSON.stringify({
+          ...blockData,
+          // If blocks are isolated, associate with current document
+          documentId: state.settings.sharedBlocks ? null : state.documentId,
+        }),
       });
 
       if (!response.ok) throw new Error("Failed to create block");
@@ -450,10 +469,11 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
   loadDocument: async (documentId) => {
     try {
-      // Load all blocks
-      const blocksRes = await fetch("/api/blocks");
-      const blocks = await blocksRes.json();
-      set({ blocks });
+      // Load settings first
+      await get().loadSettings();
+      
+      // Load blocks (will be filtered based on settings)
+      await get().loadBlocks();
 
       // Load or create document
       if (documentId) {
@@ -468,6 +488,13 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
             preamble: doc.preamble || "",
             spacing: doc.spacing ? JSON.parse(doc.spacing) : defaultSpacing,
           });
+          
+          // Reload blocks again now that we have documentId
+          await get().loadBlocks();
+          
+          // Load variant groups and documents list
+          await get().loadVariantGroups();
+          await get().loadDocuments();
           return;
         }
       }
@@ -486,6 +513,9 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
           preamble: doc.preamble || "",
           spacing: doc.spacing ? JSON.parse(doc.spacing) : defaultSpacing,
         });
+        
+        // Reload blocks with correct documentId
+        await get().loadBlocks();
       } else {
         // Create new document
         const createRes = await fetch("/api/documents", {
@@ -506,6 +536,53 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       await get().loadDocuments();
     } catch (error) {
       console.error("Error loading document:", error);
+    }
+  },
+
+  loadBlocks: async () => {
+    const state = get();
+    try {
+      const params = new URLSearchParams();
+      if (state.documentId) {
+        params.append("documentId", state.documentId);
+      }
+      params.append("sharedBlocks", String(state.settings.sharedBlocks));
+      
+      const blocksRes = await fetch(`/api/blocks?${params.toString()}`);
+      const blocks = await blocksRes.json();
+      set({ blocks });
+    } catch (error) {
+      console.error("Error loading blocks:", error);
+    }
+  },
+
+  loadSettings: async () => {
+    try {
+      const response = await fetch("/api/settings");
+      if (response.ok) {
+        const settings = await response.json();
+        set({ settings: { sharedBlocks: settings.sharedBlocks } });
+      }
+    } catch (error) {
+      console.error("Error loading settings:", error);
+    }
+  },
+
+  setSharedBlocks: async (shared) => {
+    try {
+      const response = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sharedBlocks: shared }),
+      });
+      
+      if (response.ok) {
+        set({ settings: { sharedBlocks: shared } });
+        // Reload blocks with new setting
+        await get().loadBlocks();
+      }
+    } catch (error) {
+      console.error("Error updating settings:", error);
     }
   },
 

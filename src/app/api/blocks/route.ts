@@ -2,9 +2,28 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 // GET all blocks with variant group info
-export async function GET() {
+// Query params: documentId (optional), sharedBlocks (optional)
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const documentId = searchParams.get("documentId");
+    const sharedBlocks = searchParams.get("sharedBlocks") !== "false";
+
+    let whereClause = {};
+
+    if (!sharedBlocks && documentId) {
+      // When blocks are isolated, only show blocks belonging to this document or shared (null documentId)
+      whereClause = {
+        OR: [
+          { documentId: documentId },
+          { documentId: null },
+        ],
+      };
+    }
+    // When sharedBlocks is true, show all blocks (no filter)
+
     const blocks = await prisma.contentBlock.findMany({
+      where: whereClause,
       include: {
         variantGroup: {
           select: {
@@ -34,7 +53,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, sectionType, blockType, latexContent, templateData, tags, variantGroupId } = body;
+    const { name, sectionType, blockType, latexContent, templateData, tags, variantGroupId, documentId } = body;
 
     const block = await prisma.contentBlock.create({
       data: {
@@ -45,6 +64,7 @@ export async function POST(req: Request) {
         templateData: templateData ? JSON.stringify(templateData) : null,
         tags: JSON.stringify(tags || []),
         variantGroupId: variantGroupId || null,
+        documentId: documentId || null, // null means shared
       },
       include: {
         variantGroup: {

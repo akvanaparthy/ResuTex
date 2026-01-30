@@ -21,7 +21,7 @@ import { VariantGroupModal } from "@/components/modals/VariantGroupModal";
 import { useToast } from "@/hooks/use-toast";
 
 export function BlockLibrary() {
-  const { blocks, structure, addBlockToSection, removeBlock, removeBlockFromSection, removeBlockFromVariantGroup, updateBlock } = useBuilderStore();
+  const { blocks, structure, settings, documentId, addBlockToSection, removeBlock, removeBlockFromSection, removeBlockFromVariantGroup, updateBlock } = useBuilderStore();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("ALL");
@@ -34,6 +34,10 @@ export function BlockLibrary() {
   // Get unique section types from blocks
   const uniqueSectionTypes = Array.from(new Set(blocks.map((b) => b.sectionType))).sort();
   const sectionFilters = ["ALL", ...uniqueSectionTypes];
+  
+  // Count blocks belonging to current document vs shared
+  const documentBlockCount = blocks.filter((b) => b.documentId === documentId).length;
+  const sharedBlockCount = blocks.filter((b) => !b.documentId).length;
 
   const filteredBlocks = blocks.filter((block) => {
     const searchLower = search.toLowerCase();
@@ -124,9 +128,16 @@ export function BlockLibrary() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BookOpen className="h-3.5 w-3.5 text-primary" />
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground/70">
-              Block Library
-            </h2>
+            <div>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground/70">
+                Block Library
+              </h2>
+              {!settings.sharedBlocks && (
+                <p className="text-[10px] text-muted-foreground">
+                  {documentBlockCount} local • {sharedBlockCount} shared
+                </p>
+              )}
+            </div>
           </div>
           <Button
             size="sm"
@@ -178,6 +189,7 @@ export function BlockLibrary() {
                   const isInResume = Object.values(structure.sections)
                     .flat()
                     .includes(block.id);
+                  const isLocalBlock = block.documentId === documentId;
 
                   return (
                     <Card
@@ -196,7 +208,20 @@ export function BlockLibrary() {
                         <div className="space-y-2">
                           <div className="flex items-start justify-between gap-1.5">
                             <div className="min-w-0 flex-1">
-                              <p className="font-medium text-sm truncate leading-tight">{block.name}</p>
+                              <div className="flex items-center gap-1.5">
+                                <p className="font-medium text-sm truncate leading-tight">{block.name}</p>
+                                {!settings.sharedBlocks && (
+                                  <span
+                                    className={`text-[9px] px-1 py-0.5 rounded flex-shrink-0 ${
+                                      isLocalBlock
+                                        ? "bg-orange-500/15 text-orange-600 dark:text-orange-400"
+                                        : "bg-blue-500/15 text-blue-600 dark:text-blue-400"
+                                    }`}
+                                  >
+                                    {isLocalBlock ? "local" : "shared"}
+                                  </span>
+                                )}
+                              </div>
                               {block.variantGroupId && block.variantGroup && (
                                 <div className="flex items-center gap-1.5 mt-0.5">
                                   <div
