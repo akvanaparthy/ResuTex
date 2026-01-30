@@ -375,8 +375,13 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Compilation failed");
+        const errorData = await response.json();
+        // Combine error message with full log for better debugging
+        let errorMessage = errorData.error || "Compilation failed";
+        if (errorData.fullLog) {
+          errorMessage += "\n\n--- Compiler Log ---\n" + errorData.fullLog;
+        }
+        throw new Error(errorMessage);
       }
 
       // Create blob URL for PDF

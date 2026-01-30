@@ -210,15 +210,17 @@ export function PdfPreview() {
       <div className="flex-1 overflow-auto preview-bg">
         <div className="min-h-full flex items-start justify-center p-8">
           {error ? (
-            <div className="max-w-lg w-full animate-fade-in-up mt-8">
+            <div className="max-w-2xl w-full animate-fade-in-up mt-8">
               <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-5">
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <AlertTriangle className="h-4 w-4 text-destructive" />
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <h3 className="text-sm font-semibold text-destructive">Compilation Error</h3>
-                    <pre className="mt-2 text-xs text-destructive/80 whitespace-pre-wrap font-mono leading-relaxed break-all">{error}</pre>
+                    <div className="mt-3 max-h-[60vh] overflow-auto rounded border border-destructive/20 bg-background/50 p-3">
+                      <pre className="text-xs text-destructive/90 whitespace-pre-wrap font-mono leading-relaxed">{error}</pre>
+                    </div>
                   </div>
                 </div>
               </div>
