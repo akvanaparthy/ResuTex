@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, GripVertical, MoreVertical, ChevronDown, ChevronRight, Trash2, Layers, Check, X, Repeat, Pencil } from "lucide-react";
+import { Plus, GripVertical, MoreVertical, ChevronDown, ChevronRight, Trash2, Layers, Check, X, Repeat, Pencil, ArrowDownUp } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +14,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useBuilderStore, type ContentBlock } from "@/lib/store/builder-store";
 import { SwapVariantModal } from "@/components/modals/SwapVariantModal";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   DndContext,
   closestCenter,
@@ -32,21 +38,24 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-// Suggested common sections (can still add custom ones)
-const SUGGESTED_SECTIONS = [
+// Canonical section order for sorting and dropdowns
+const SECTION_ORDER = [
   "PLAIN",
   "SUMMARY",
   "EDUCATION",
   "EXPERIENCE",
   "PROJECTS",
-  "SKILLS",
-  "ACHIEVEMENTS",
-  "CERTIFICATIONS",
-  "AWARDS",
   "PUBLICATIONS",
+  "SKILLS",
   "LANGUAGES",
+  "ACHIEVEMENTS",
+  "AWARDS",
+  "CERTIFICATIONS",
   "INTERESTS",
 ];
+
+// Suggested common sections (can still add custom ones)
+const SUGGESTED_SECTIONS = SECTION_ORDER;
 
 // Generate icon from section name (first 2 letters)
 const getSectionIcon = (sectionType: string): string => {
@@ -384,7 +393,7 @@ export function ResumeStructure() {
   };
 
   const availableSuggestions = SUGGESTED_SECTIONS.filter(
-    (type) => !structure.sectionOrder.includes(type)
+    (type) => type === "PLAIN" || !structure.sectionOrder.includes(type)
   );
 
   const handleAddCustomSection = () => {
@@ -421,6 +430,19 @@ export function ResumeStructure() {
     setSwapModalOpen(true);
   };
 
+  const handleSortSections = () => {
+    // Sort current sections according to SECTION_ORDER
+    const sortedOrder = [...structure.sectionOrder].sort((a, b) => {
+      const indexA = SECTION_ORDER.indexOf(a);
+      const indexB = SECTION_ORDER.indexOf(b);
+      // If not in SECTION_ORDER, put at the end
+      const orderA = indexA === -1 ? SECTION_ORDER.length : indexA;
+      const orderB = indexB === -1 ? SECTION_ORDER.length : indexB;
+      return orderA - orderB;
+    });
+    reorderSections(sortedOrder);
+  };
+
   return (
     <div className="h-full flex flex-col">
       <div className="px-4 py-3 border-b border-border/60">
@@ -430,6 +452,25 @@ export function ResumeStructure() {
             <h2 className="text-xs font-semibold uppercase tracking-wider text-foreground/70">
               Resume Structure
             </h2>
+            {structure.sectionOrder.length > 1 && (
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 text-muted-foreground hover:text-foreground"
+                      onClick={handleSortSections}
+                    >
+                      <ArrowDownUp className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Sort sections (standard order)</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
           <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
             {structure.sectionOrder.length} sections

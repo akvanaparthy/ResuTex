@@ -34,8 +34,11 @@ const SECTION_TYPES = [
   { value: "EDUCATION", label: "Education" },
   { value: "EXPERIENCE", label: "Experience" },
   { value: "PROJECTS", label: "Projects" },
+  { value: "PUBLICATIONS", label: "Publications" },
   { value: "SKILLS", label: "Skills" },
+  { value: "LANGUAGES", label: "Languages" },
   { value: "ACHIEVEMENTS", label: "Achievements" },
+  { value: "AWARDS", label: "Awards" },
   { value: "CERTIFICATIONS", label: "Certifications" },
 ];
 

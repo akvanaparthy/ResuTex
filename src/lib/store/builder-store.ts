@@ -122,7 +122,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   documentId: null,
   documentName: "My Resume",
   preamble: "",
-  spacing: { section: -8, block: -6, line: 1.0 },
+  spacing: { section: 2, block: -6, line: 1.0 },
   variantGroups: [],
   documents: [],
   settings: { sharedBlocks: false },
@@ -204,14 +204,27 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
   addSection: (sectionType) => {
     set((state) => {
-      if (state.structure.sectionOrder.includes(sectionType)) return state;
+      // For PLAIN sections, allow multiple instances with unique names
+      let finalSectionType = sectionType;
+      if (sectionType === "PLAIN") {
+        // Count existing PLAIN sections
+        const plainCount = state.structure.sectionOrder.filter(
+          (s) => s === "PLAIN" || s.startsWith("PLAIN_")
+        ).length;
+        // First PLAIN is just "PLAIN", subsequent ones are "PLAIN_2", "PLAIN_3", etc.
+        if (plainCount > 0) {
+          finalSectionType = `PLAIN_${plainCount + 1}`;
+        }
+      } else if (state.structure.sectionOrder.includes(sectionType)) {
+        return state;
+      }
 
       return {
         structure: {
-          sectionOrder: [...state.structure.sectionOrder, sectionType],
+          sectionOrder: [...state.structure.sectionOrder, finalSectionType],
           sections: {
             ...state.structure.sections,
-            [sectionType]: [],
+            [finalSectionType]: [],
           },
         },
       };
@@ -342,7 +355,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   },
 
   resetSpacing: () => {
-    set({ spacing: { section: -8, block: -6, line: 1.0 } });
+    set({ spacing: { section: 2, block: -6, line: 1.0 } });
     get().saveDocument();
   },
 

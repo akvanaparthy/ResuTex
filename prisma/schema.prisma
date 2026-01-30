@@ -72,7 +72,7 @@ model ResumeDocument {
   // Settings
   preamble   String @default("")
   headerData String @default("{}") // JSON: { name, email, phone, links }
-  spacing    String @default("{\"section\":-8,\"block\":-6,\"line\":1.0}")
+  spacing    String @default("{\"section\":2,\"block\":-6,\"line\":1.0}")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -113,7 +113,7 @@ export function assembleLatex(
   const preamble = document.preamble || DEFAULT_PREAMBLE;
   const structure: ResumeStructure = JSON.parse(document.structure);
   const headerData: HeaderData = JSON.parse(document.headerData);
-  const spacing: SpacingSettings = document.spacing ? JSON.parse(document.spacing) : { section: -8, block: -6, line: 1.0 };
+  const spacing: SpacingSettings = document.spacing ? JSON.parse(document.spacing) : { section: 2, block: -6, line: 1.0 };
 
   const lines: string[] = [];
 
@@ -144,11 +144,14 @@ export function assembleLatex(
     const blockIds = structure.sections[sectionType] || [];
     if (blockIds.length === 0) continue;
 
-    const sectionTitle = SECTION_TITLES[sectionType] ?? sectionType;
-    const wrapper = SECTION_WRAPPERS[sectionType] || { start: "", end: "" };
+    // Normalize section type for lookups (PLAIN_2 -> PLAIN)
+    const baseSectionType = sectionType.startsWith("PLAIN") ? "PLAIN" : sectionType;
+    
+    const sectionTitle = SECTION_TITLES[baseSectionType] ?? sectionType;
+    const wrapper = SECTION_WRAPPERS[baseSectionType] || { start: "", end: "" };
 
     // Only add section header if not a PLAIN section
-    if (sectionType !== "PLAIN" && sectionTitle) {
+    if (!sectionType.startsWith("PLAIN") && sectionTitle) {
       lines.push(`\\section{${sectionTitle}}`);
     }
 
