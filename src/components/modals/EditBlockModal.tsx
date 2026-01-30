@@ -38,17 +38,6 @@ const SECTION_TYPES = [
   { value: "CERTIFICATIONS", label: "Certifications" },
 ];
 
-const BLOCK_TYPES = [
-  { value: "experience-item", label: "Experience Item" },
-  { value: "education-item", label: "Education Item" },
-  { value: "project-item", label: "Project Item" },
-  { value: "skill-category", label: "Skill Category" },
-  { value: "achievement-item", label: "Achievement Item" },
-  { value: "certification-item", label: "Certification Item" },
-  { value: "summary-text", label: "Summary Text" },
-  { value: "custom", label: "Custom" },
-];
-
 export function EditBlockModal({
   open,
   onOpenChange,
@@ -57,14 +46,12 @@ export function EditBlockModal({
 }: EditBlockModalProps) {
   const [name, setName] = useState("");
   const [sectionType, setSectionType] = useState("EXPERIENCE");
-  const [blockType, setBlockType] = useState("experience-item");
   const [latexContent, setLatexContent] = useState("");
 
   useEffect(() => {
     if (block) {
       setName(block.name);
       setSectionType(block.sectionType);
-      setBlockType(block.blockType);
       setLatexContent(block.latexContent);
     }
   }, [block]);
@@ -74,7 +61,6 @@ export function EditBlockModal({
     onSave({
       name,
       sectionType,
-      blockType,
       latexContent,
     });
     onOpenChange(false);
@@ -106,38 +92,20 @@ export function EditBlockModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="sectionType" className="text-xs font-medium">Section Type</Label>
-              <Select value={sectionType} onValueChange={setSectionType}>
-                <SelectTrigger className="h-9 text-sm bg-muted/30 border-border/40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SECTION_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="blockType" className="text-xs font-medium">Block Type</Label>
-              <Select value={blockType} onValueChange={setBlockType}>
-                <SelectTrigger className="h-9 text-sm bg-muted/30 border-border/40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BLOCK_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="sectionType" className="text-xs font-medium">Section Type</Label>
+            <Select value={sectionType} onValueChange={setSectionType}>
+              <SelectTrigger className="h-9 text-sm bg-muted/30 border-border/40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SECTION_TYPES.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1.5">
