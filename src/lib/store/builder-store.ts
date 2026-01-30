@@ -23,6 +23,12 @@ export interface ResumeStructure {
   sections: Record<string, string[]>; // sectionType -> blockIds
 }
 
+export interface SpacingSettings {
+  section: number;
+  block: number;
+  line: number;
+}
+
 interface BuilderState {
   // Data
   blocks: ContentBlock[];
@@ -30,6 +36,7 @@ interface BuilderState {
   documentId: string | null;
   documentName: string;
   preamble: string;
+  spacing: SpacingSettings;
   variantGroups: VariantGroup[];
 
   // Compilation state
@@ -57,6 +64,10 @@ interface BuilderState {
   setPreamble: (preamble: string) => void;
   resetPreamble: () => void;
 
+  // Actions - Spacing
+  setSpacing: (spacing: SpacingSettings) => void;
+  resetSpacing: () => void;
+
   // Actions - Variant Groups
   loadVariantGroups: () => Promise<void>;
   addBlockToVariantGroup: (blockId: string, groupId: string) => Promise<void>;
@@ -82,6 +93,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   documentId: null,
   documentName: "My Resume",
   preamble: "",
+  spacing: { section: -8, block: -6, line: 1.0 },
   variantGroups: [],
   isCompiling: false,
   pdfUrl: null,
@@ -287,6 +299,17 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     get().saveDocument();
   },
 
+  // Spacing actions
+  setSpacing: (spacing) => {
+    set({ spacing });
+    get().saveDocument();
+  },
+
+  resetSpacing: () => {
+    set({ spacing: { section: -8, block: -6, line: 1.0 } });
+    get().saveDocument();
+  },
+
   // Compilation
   compile: async () => {
     const state = get();
@@ -338,11 +361,13 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         const docRes = await fetch(`/api/documents/${documentId}`);
         if (docRes.ok) {
           const doc = await docRes.json();
+          const defaultSpacing = { section: -8, block: -6, line: 1.0 };
           set({
             documentId: doc.id,
             documentName: doc.name,
             structure: JSON.parse(doc.structure),
             preamble: doc.preamble || "",
+            spacing: doc.spacing ? JSON.parse(doc.spacing) : defaultSpacing,
           });
           return;
         }
@@ -354,11 +379,13 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
 
       if (docs.length > 0) {
         const doc = docs[0];
+        const defaultSpacing = { section: -8, block: -6, line: 1.0 };
         set({
           documentId: doc.id,
           documentName: doc.name,
           structure: JSON.parse(doc.structure),
           preamble: doc.preamble || "",
+          spacing: doc.spacing ? JSON.parse(doc.spacing) : defaultSpacing,
         });
       } else {
         // Create new document
@@ -394,6 +421,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
           name: state.documentName,
           structure: JSON.stringify(state.structure),
           preamble: state.preamble,
+          spacing: JSON.stringify(state.spacing),
         }),
       });
     } catch (error) {

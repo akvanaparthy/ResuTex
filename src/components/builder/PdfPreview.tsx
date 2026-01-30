@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, ZoomIn, ZoomOut, FileText, AlertTriangle, Package, FileCode } from "lucide-react";
+import { RefreshCw, ZoomIn, ZoomOut, FileText, AlertTriangle, Package, FileCode, SlidersHorizontal } from "lucide-react";
 import { useBuilderStore } from "@/lib/store/builder-store";
 import { useToast } from "@/hooks/use-toast";
 import { PreambleModal } from "@/components/modals/PreambleModal";
+import { SpacingSettingsModal } from "@/components/modals/SpacingSettingsModal";
 
 export function PdfPreview() {
   const { isCompiling, pdfUrl, compile, error } = useBuilderStore();
   const [zoom, setZoom] = useState(100);
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [preambleModalOpen, setPreambleModalOpen] = useState(false);
+  const [spacingModalOpen, setSpacingModalOpen] = useState(false);
   const { toast } = useToast();
 
   const handleLatexSetup = async () => {
@@ -158,6 +160,17 @@ export function PdfPreview() {
             <FileCode className="h-3 w-3" />
             Preamble
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSpacingModalOpen(true)}
+            disabled={isSettingUp || isCompiling}
+            className="h-7 text-xs gap-1.5 border-border/60"
+            title="Adjust spacing settings"
+          >
+            <SlidersHorizontal className="h-3 w-3" />
+            Spacing
+          </Button>
           {pdfUrl && !isCompiling && !isSettingUp && (
             <div className="flex items-center gap-1 ml-1">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse-dot" />
@@ -241,6 +254,7 @@ export function PdfPreview() {
       </div>
 
       <PreambleModal open={preambleModalOpen} onOpenChange={setPreambleModalOpen} />
+      <SpacingSettingsModal open={spacingModalOpen} onOpenChange={setSpacingModalOpen} />
     </div>
   );
 }
