@@ -125,7 +125,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   spacing: { section: -8, block: -6, line: 1.0 },
   variantGroups: [],
   documents: [],
-  settings: { sharedBlocks: true },
+  settings: { sharedBlocks: false },
   isCompiling: false,
   pdfUrl: null,
   error: null,

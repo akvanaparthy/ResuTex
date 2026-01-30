@@ -13,7 +13,7 @@ export async function GET() {
       settings = await prisma.appSettings.create({
         data: {
           id: "default",
-          sharedBlocks: true,
+          sharedBlocks: false,
         },
       });
     }

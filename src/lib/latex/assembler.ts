@@ -57,18 +57,6 @@ const SECTION_WRAPPERS: Record<string, { start: string; end: string }> = {
   CERTIFICATIONS: { start: "\\begin{itemize}[leftmargin=0.15in, itemsep=-3pt]", end: "\\end{itemize}" },
 };
 
-// Per-section spacing after (matching sample resume exactly)
-const SECTION_POST_SPACING: Record<string, number> = {
-  PLAIN: 0, // No extra spacing for plain sections
-  SUMMARY: -8,
-  EDUCATION: 0, // resumeSubHeadingListEnd handles spacing
-  EXPERIENCE: 0,
-  PROJECTS: 0,
-  SKILLS: -10,
-  ACHIEVEMENTS: -10,
-  CERTIFICATIONS: 0,
-};
-
 function generateHeader(headerData: HeaderData): string {
   if (!headerData.name) return "";
 
@@ -125,13 +113,20 @@ export function assembleLatex(
   const preamble = document.preamble || DEFAULT_PREAMBLE;
   const structure: ResumeStructure = JSON.parse(document.structure);
   const headerData: HeaderData = JSON.parse(document.headerData);
-  const spacing: SpacingSettings = JSON.parse(document.spacing);
+  const spacing: SpacingSettings = document.spacing ? JSON.parse(document.spacing) : { section: -8, block: -6, line: 1.0 };
 
   const lines: string[] = [];
 
   // Preamble
   lines.push(preamble);
   lines.push("");
+  
+  // Apply line spacing if not default (1.0)
+  if (spacing.line && spacing.line !== 1.0) {
+    lines.push(`\\linespread{${spacing.line}}`);
+    lines.push("");
+  }
+  
   lines.push("\\begin{document}");
   lines.push("");
 
@@ -143,7 +138,9 @@ export function assembleLatex(
   }
 
   // Sections
-  for (const sectionType of structure.sectionOrder) {
+  const sectionCount = structure.sectionOrder.length;
+  for (let sectionIndex = 0; sectionIndex < sectionCount; sectionIndex++) {
+    const sectionType = structure.sectionOrder[sectionIndex];
     const blockIds = structure.sections[sectionType] || [];
     if (blockIds.length === 0) continue;
 
@@ -163,7 +160,7 @@ export function assembleLatex(
       const block = blocks.find((b) => b.id === blockIds[i]);
       if (block) {
         lines.push(block.latexContent);
-        // Add spacing between blocks (except last) - only if positive value
+        // Add spacing between blocks (except last)
         if (i < blockIds.length - 1 && spacing.block !== 0) {
           lines.push(`\\vspace{${spacing.block}pt}`);
         }
@@ -174,10 +171,10 @@ export function assembleLatex(
       lines.push(wrapper.end);
     }
 
-    // Add per-section post spacing (from sample resume) or fallback to global spacing
-    const postSpacing = SECTION_POST_SPACING[sectionType] ?? spacing.section;
-    if (postSpacing !== 0) {
-      lines.push(`\\vspace{${postSpacing}pt}`);
+    // Add section spacing (except after last section)
+    const isLastSection = sectionIndex === sectionCount - 1;
+    if (!isLastSection && spacing.section !== 0) {
+      lines.push(`\\vspace{${spacing.section}pt}`);
     }
     lines.push("");
   }
