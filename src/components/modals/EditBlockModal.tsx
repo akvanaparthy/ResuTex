@@ -86,7 +86,7 @@ export function EditBlockModal({
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Google SWE Internship"
+              placeholder="e.g., Software Engineer at Company X"
               className="h-9 text-sm bg-muted/30 border-border/40 focus:bg-background"
               required
             />

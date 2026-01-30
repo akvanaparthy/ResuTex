@@ -100,7 +100,7 @@ export function CreateBlockModal({ open, onOpenChange }: CreateBlockModalProps) 
               <Label htmlFor="name" className="text-xs font-medium">Block Name</Label>
               <Input
                 id="name"
-                placeholder="e.g., Mavenwit Experience"
+                placeholder="e.g., My Work Experience"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="h-9 text-sm bg-muted/30 border-border/40 focus:bg-background"

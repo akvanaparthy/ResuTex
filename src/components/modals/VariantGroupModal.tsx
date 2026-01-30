@@ -221,16 +221,16 @@ export function VariantGroupModal({
                 </Label>
                 <Input
                   id="group-name"
-                  placeholder="e.g., Mavenwit Experience Variants"
+                  placeholder="e.g., Experience Variants"
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
                   className="h-9 text-sm bg-muted/30 border-border/40 focus:bg-background"
                 />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label className="text-xs font-medium">Color</Label>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-2 pt-2">
                   {VARIANT_COLORS.map((color) => (
                     <button
                       key={color.hex}
@@ -238,7 +238,7 @@ export function VariantGroupModal({
                       onClick={() => setSelectedColor(color.hex)}
                       className={`aspect-square rounded-lg transition-all relative ${
                         selectedColor === color.hex
-                          ? "ring-2 ring-offset-2 ring-offset-background scale-110"
+                          ? "ring-2 ring-offset-2 ring-offset-background"
                           : "hover:scale-105"
                       }`}
                       style={{
