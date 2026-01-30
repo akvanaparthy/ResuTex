@@ -36,7 +36,11 @@ export function BlockLibrary() {
   const sectionFilters = ["ALL", ...uniqueSectionTypes];
 
   const filteredBlocks = blocks.filter((block) => {
-    const matchesSearch = block.name.toLowerCase().includes(search.toLowerCase());
+    const searchLower = search.toLowerCase();
+    const matchesSearch = 
+      block.name.toLowerCase().includes(searchLower) ||
+      block.latexContent.toLowerCase().includes(searchLower) ||
+      block.sectionType.toLowerCase().includes(searchLower);
     const matchesFilter = filter === "ALL" || block.sectionType === filter;
     return matchesSearch && matchesFilter;
   });

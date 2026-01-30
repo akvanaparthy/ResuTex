@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { ResumeStructure } from "@/components/builder/ResumeStructure";
 import { BlockLibrary } from "@/components/builder/BlockLibrary";
 import { PdfPreview } from "@/components/builder/PdfPreview";
+import { DocumentSelector } from "@/components/builder/DocumentSelector";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -105,7 +106,7 @@ export default function BuilderPage() {
             <h1 className="text-base font-semibold tracking-tight">ResuTex</h1>
           </div>
           <div className="h-4 w-px bg-border/60" />
-          <span className="text-xs text-muted-foreground font-medium tracking-wide uppercase">Builder</span>
+          <DocumentSelector />
         </div>
 
         <div className="flex items-center gap-1.5">

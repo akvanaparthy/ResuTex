@@ -29,6 +29,12 @@ export interface SpacingSettings {
   line: number;
 }
 
+export interface ResumeDocument {
+  id: string;
+  name: string;
+  updatedAt: string;
+}
+
 interface BuilderState {
   // Data
   blocks: ContentBlock[];
@@ -38,6 +44,9 @@ interface BuilderState {
   preamble: string;
   spacing: SpacingSettings;
   variantGroups: VariantGroup[];
+  
+  // Documents list
+  documents: ResumeDocument[];
 
   // Compilation state
   isCompiling: boolean;
@@ -78,6 +87,13 @@ interface BuilderState {
   // Actions - Compilation
   compile: () => Promise<void>;
 
+  // Actions - Documents
+  loadDocuments: () => Promise<void>;
+  createDocument: (name: string) => Promise<string>;
+  deleteDocument: (documentId: string) => Promise<void>;
+  renameDocument: (name: string) => Promise<void>;
+  switchDocument: (documentId: string) => Promise<void>;
+
   // Actions - Persistence
   loadDocument: (documentId?: string) => Promise<void>;
   saveDocument: () => Promise<void>;
@@ -95,6 +111,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   preamble: "",
   spacing: { section: -8, block: -6, line: 1.0 },
   variantGroups: [],
+  documents: [],
   isCompiling: false,
   pdfUrl: null,
   error: null,
@@ -349,6 +366,88 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   },
 
   // Persistence
+  loadDocuments: async () => {
+    try {
+      const response = await fetch("/api/documents");
+      if (!response.ok) throw new Error("Failed to load documents");
+      const docs = await response.json();
+      set({ documents: docs });
+    } catch (error) {
+      console.error("Error loading documents:", error);
+    }
+  },
+
+  createDocument: async (name) => {
+    try {
+      const response = await fetch("/api/documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (!response.ok) throw new Error("Failed to create document");
+      const newDoc = await response.json();
+      
+      // Refresh documents list
+      await get().loadDocuments();
+      
+      return newDoc.id;
+    } catch (error) {
+      console.error("Error creating document:", error);
+      throw error;
+    }
+  },
+
+  deleteDocument: async (documentId) => {
+    try {
+      const response = await fetch(`/api/documents/${documentId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete document");
+      
+      // Refresh documents list
+      await get().loadDocuments();
+      
+      // If we deleted the current document, switch to another
+      if (get().documentId === documentId) {
+        const docs = get().documents;
+        if (docs.length > 0) {
+          await get().switchDocument(docs[0].id);
+        } else {
+          // Create a new document if none left
+          const newId = await get().createDocument("My Resume");
+          await get().switchDocument(newId);
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      throw error;
+    }
+  },
+
+  renameDocument: async (name) => {
+    const state = get();
+    if (!state.documentId) return;
+    
+    set({ documentName: name });
+    await get().saveDocument();
+    await get().loadDocuments();
+  },
+
+  switchDocument: async (documentId) => {
+    // Save current document first
+    await get().saveDocument();
+    
+    // Clear PDF when switching
+    const currentPdfUrl = get().pdfUrl;
+    if (currentPdfUrl) {
+      URL.revokeObjectURL(currentPdfUrl);
+    }
+    set({ pdfUrl: null, error: null });
+    
+    // Load new document
+    await get().loadDocument(documentId);
+  },
+
   loadDocument: async (documentId) => {
     try {
       // Load all blocks
@@ -402,8 +501,9 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         });
       }
 
-      // Load variant groups
+      // Load variant groups and documents list
       await get().loadVariantGroups();
+      await get().loadDocuments();
     } catch (error) {
       console.error("Error loading document:", error);
     }

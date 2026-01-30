@@ -34,6 +34,7 @@ import { CSS } from "@dnd-kit/utilities";
 
 // Suggested common sections (can still add custom ones)
 const SUGGESTED_SECTIONS = [
+  "PLAIN",
   "SUMMARY",
   "EDUCATION",
   "EXPERIENCE",
