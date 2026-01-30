@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Search, FileText, BookOpen, Check, Trash2, MoreVertical, Palette, X } from "lucide-react";
+import { Plus, Search, FileText, BookOpen, Check, Trash2, MoreVertical, Palette, X, Pencil, Minus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,19 +14,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useBuilderStore } from "@/lib/store/builder-store";
+import { useBuilderStore, type ContentBlock } from "@/lib/store/builder-store";
 import { CreateBlockModal } from "@/components/modals/CreateBlockModal";
+import { EditBlockModal } from "@/components/modals/EditBlockModal";
 import { VariantGroupModal } from "@/components/modals/VariantGroupModal";
 import { useToast } from "@/hooks/use-toast";
 
 export function BlockLibrary() {
-  const { blocks, structure, addBlockToSection, removeBlock, removeBlockFromVariantGroup } = useBuilderStore();
+  const { blocks, structure, addBlockToSection, removeBlock, removeBlockFromSection, removeBlockFromVariantGroup, updateBlock } = useBuilderStore();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("ALL");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [variantModalOpen, setVariantModalOpen] = useState(false);
   const [selectedBlockForVariant, setSelectedBlockForVariant] = useState<string | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedBlockForEdit, setSelectedBlockForEdit] = useState<ContentBlock | null>(null);
 
   // Get unique section types from blocks
   const uniqueSectionTypes = Array.from(new Set(blocks.map((b) => b.sectionType))).sort();
@@ -79,6 +82,36 @@ export function BlockLibrary() {
         });
       }
     }
+  };
+
+  const handleEditBlock = (block: ContentBlock) => {
+    setSelectedBlockForEdit(block);
+    setEditModalOpen(true);
+  };
+
+  const handleSaveBlock = async (data: Partial<ContentBlock>) => {
+    if (!selectedBlockForEdit) return;
+    try {
+      await updateBlock(selectedBlockForEdit.id, data);
+      toast({
+        title: "Block Updated",
+        description: "Block has been saved successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update block.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRemoveFromResume = (blockId: string, sectionType: string) => {
+    removeBlockFromSection(blockId, sectionType);
+    toast({
+      title: "Block Removed",
+      description: "Block removed from resume.",
+    });
   };
 
   return (
@@ -193,6 +226,11 @@ export function BlockLibrary() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleEditBlock(block)}>
+                                    <Pencil className="h-3.5 w-3.5 mr-2" />
+                                    Edit Block
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
                                   {block.variantGroupId ? (
                                     <DropdownMenuItem onClick={() => handleRemoveFromVariantGroup(block.id)}>
                                       <X className="h-3.5 w-3.5 mr-2" />
@@ -219,15 +257,28 @@ export function BlockLibrary() {
                           <p className="text-xs text-muted-foreground/70 line-clamp-2 font-mono leading-relaxed">
                             {block.latexContent.substring(0, 65)}...
                           </p>
-                          <Button
-                            size="sm"
-                            variant={isInResume ? "secondary" : "outline"}
-                            className="w-full h-7 text-xs border-border/40 transition-all"
-                            onClick={() => handleAddBlock(block.id, block.sectionType)}
-                            disabled={isInResume || !structure.sectionOrder.includes(block.sectionType)}
-                          >
-                            {isInResume ? "Added" : "+ Add to Resume"}
-                          </Button>
+                          {isInResume ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full h-7 text-xs border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive transition-all"
+                              onClick={() => handleRemoveFromResume(block.id, block.sectionType)}
+                            >
+                              <Minus className="h-3 w-3 mr-1" />
+                              Remove
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full h-7 text-xs border-border/40 transition-all"
+                              onClick={() => handleAddBlock(block.id, block.sectionType)}
+                              disabled={!structure.sectionOrder.includes(block.sectionType)}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add to Resume
+                            </Button>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -240,6 +291,12 @@ export function BlockLibrary() {
       </Tabs>
 
       <CreateBlockModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+      <EditBlockModal
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        block={selectedBlockForEdit}
+        onSave={handleSaveBlock}
+      />
       <VariantGroupModal
         open={variantModalOpen}
         onOpenChange={setVariantModalOpen}

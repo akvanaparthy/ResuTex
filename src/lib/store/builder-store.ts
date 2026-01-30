@@ -29,6 +29,7 @@ interface BuilderState {
   structure: ResumeStructure;
   documentId: string | null;
   documentName: string;
+  preamble: string;
   variantGroups: VariantGroup[];
 
   // Compilation state
@@ -39,16 +40,22 @@ interface BuilderState {
   // Actions - Blocks
   setBlocks: (blocks: ContentBlock[]) => void;
   addBlock: (block: Omit<ContentBlock, "id" | "tags">) => Promise<void>;
+  updateBlock: (blockId: string, data: Partial<ContentBlock>) => Promise<void>;
   removeBlock: (blockId: string) => Promise<void>;
 
   // Actions - Structure
   setStructure: (structure: ResumeStructure) => void;
   addSection: (sectionType: string) => void;
   removeSection: (sectionType: string) => void;
+  renameSection: (oldName: string, newName: string) => void;
   addBlockToSection: (blockId: string, sectionType: string) => Promise<boolean>;
   removeBlockFromSection: (blockId: string, sectionType: string) => void;
   reorderBlocksInSection: (sectionType: string, blockIds: string[]) => void;
   reorderSections: (sectionOrder: string[]) => void;
+
+  // Actions - Preamble
+  setPreamble: (preamble: string) => void;
+  resetPreamble: () => void;
 
   // Actions - Variant Groups
   loadVariantGroups: () => Promise<void>;
@@ -74,6 +81,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   },
   documentId: null,
   documentName: "My Resume",
+  preamble: "",
   variantGroups: [],
   isCompiling: false,
   pdfUrl: null,
@@ -98,6 +106,26 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       }));
     } catch (error) {
       console.error("Error adding block:", error);
+      throw error;
+    }
+  },
+
+  updateBlock: async (blockId, data) => {
+    try {
+      const response = await fetch(`/api/blocks/${blockId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) throw new Error("Failed to update block");
+
+      const updatedBlock = await response.json();
+      set((state) => ({
+        blocks: state.blocks.map((b) => (b.id === blockId ? updatedBlock : b)),
+      }));
+    } catch (error) {
+      console.error("Error updating block:", error);
       throw error;
     }
   },
@@ -152,6 +180,30 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       return {
         structure: {
           sectionOrder: state.structure.sectionOrder.filter((s) => s !== sectionType),
+          sections: newSections,
+        },
+      };
+    });
+    get().saveDocument();
+  },
+
+  renameSection: (oldName, newName) => {
+    const trimmedNew = newName.trim().toUpperCase();
+    if (!trimmedNew || oldName === trimmedNew) return;
+
+    set((state) => {
+      // Don't rename if new name already exists
+      if (state.structure.sectionOrder.includes(trimmedNew)) return state;
+
+      const newSections = { ...state.structure.sections };
+      newSections[trimmedNew] = newSections[oldName] || [];
+      delete newSections[oldName];
+
+      return {
+        structure: {
+          sectionOrder: state.structure.sectionOrder.map((s) =>
+            s === oldName ? trimmedNew : s
+          ),
           sections: newSections,
         },
       };
@@ -224,6 +276,17 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     get().saveDocument();
   },
 
+  // Preamble actions
+  setPreamble: (preamble) => {
+    set({ preamble });
+    get().saveDocument();
+  },
+
+  resetPreamble: () => {
+    set({ preamble: "" });
+    get().saveDocument();
+  },
+
   // Compilation
   compile: async () => {
     const state = get();
@@ -279,6 +342,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
             documentId: doc.id,
             documentName: doc.name,
             structure: JSON.parse(doc.structure),
+            preamble: doc.preamble || "",
           });
           return;
         }
@@ -294,6 +358,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
           documentId: doc.id,
           documentName: doc.name,
           structure: JSON.parse(doc.structure),
+          preamble: doc.preamble || "",
         });
       } else {
         // Create new document
@@ -328,6 +393,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         body: JSON.stringify({
           name: state.documentName,
           structure: JSON.stringify(state.structure),
+          preamble: state.preamble,
         }),
       });
     } catch (error) {

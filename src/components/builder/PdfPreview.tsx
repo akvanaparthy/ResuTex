@@ -2,14 +2,16 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Download, ZoomIn, ZoomOut, FileText, AlertTriangle, Package } from "lucide-react";
+import { RefreshCw, ZoomIn, ZoomOut, FileText, AlertTriangle, Package, FileCode } from "lucide-react";
 import { useBuilderStore } from "@/lib/store/builder-store";
 import { useToast } from "@/hooks/use-toast";
+import { PreambleModal } from "@/components/modals/PreambleModal";
 
 export function PdfPreview() {
   const { isCompiling, pdfUrl, compile, error } = useBuilderStore();
   const [zoom, setZoom] = useState(100);
   const [isSettingUp, setIsSettingUp] = useState(false);
+  const [preambleModalOpen, setPreambleModalOpen] = useState(false);
   const { toast } = useToast();
 
   const handleLatexSetup = async () => {
@@ -145,6 +147,17 @@ export function PdfPreview() {
               </>
             )}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPreambleModalOpen(true)}
+            disabled={isSettingUp || isCompiling}
+            className="h-7 text-xs gap-1.5 border-border/60"
+            title="Edit LaTeX preamble"
+          >
+            <FileCode className="h-3 w-3" />
+            Preamble
+          </Button>
           {pdfUrl && !isCompiling && !isSettingUp && (
             <div className="flex items-center gap-1 ml-1">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse-dot" />
@@ -177,17 +190,6 @@ export function PdfPreview() {
           >
             <ZoomIn className="h-3.5 w-3.5" />
           </Button>
-        </div>
-
-        <div>
-          {pdfUrl && (
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5 border-border/60" asChild>
-              <a href={pdfUrl} download="resume.pdf">
-                <Download className="h-3 w-3" />
-                Download
-              </a>
-            </Button>
-          )}
         </div>
       </div>
 
@@ -237,6 +239,8 @@ export function PdfPreview() {
           )}
         </div>
       </div>
+
+      <PreambleModal open={preambleModalOpen} onOpenChange={setPreambleModalOpen} />
     </div>
   );
 }

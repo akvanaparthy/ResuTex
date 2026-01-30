@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, GripVertical, MoreVertical, ChevronDown, ChevronRight, Trash2, Layers, Check, X, Repeat } from "lucide-react";
+import { Plus, GripVertical, MoreVertical, ChevronDown, ChevronRight, Trash2, Layers, Check, X, Repeat, Pencil } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -146,6 +146,7 @@ interface SortableSectionProps {
   blockCount: number;
   onToggle: () => void;
   onRemoveSection: () => void;
+  onRenameSection: (newName: string) => void;
   onRemoveBlock: (blockId: string) => void;
   blocks: ContentBlock[];
   onReorderBlocks: (blockIds: string[]) => void;
@@ -159,11 +160,15 @@ function SortableSection({
   blockCount,
   onToggle,
   onRemoveSection,
+  onRenameSection,
   onRemoveBlock,
   blocks,
   onReorderBlocks,
   onSwapVariant,
 }: SortableSectionProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(sectionType);
+
   const {
     attributes,
     listeners,
@@ -197,6 +202,32 @@ function SortableSection({
     }
   };
 
+  const handleStartEditing = () => {
+    setEditName(sectionType);
+    setIsEditing(true);
+  };
+
+  const handleSaveEdit = () => {
+    const trimmed = editName.trim().toUpperCase();
+    if (trimmed && trimmed !== sectionType) {
+      onRenameSection(trimmed);
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditName(sectionType);
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSaveEdit();
+    } else if (e.key === "Escape") {
+      handleCancelEdit();
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -208,43 +239,78 @@ function SortableSection({
         <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
           <GripVertical className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
         </div>
-        <div
-          className="flex items-center gap-2 flex-1 cursor-pointer"
-          onClick={onToggle}
-        >
-          <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <span className="text-[10px] font-bold text-primary">
-              {getSectionIcon(sectionType)}
-            </span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <span className="text-sm font-medium">{sectionType}</span>
-          </div>
-          <span className="text-[10px] text-muted-foreground tabular-nums">
-            {blockCount}
-          </span>
-          {isExpanded ? (
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground transition-transform" />
-          )}
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-            <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity">
-              <MoreVertical className="h-3.5 w-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={onRemoveSection}
+        {isEditing ? (
+          <div className="flex items-center gap-1 flex-1">
+            <Input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value.toUpperCase())}
+              onKeyDown={handleKeyDown}
+              className="h-7 text-sm uppercase flex-1"
+              autoFocus
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950"
+              onClick={handleSaveEdit}
             >
-              <Trash2 className="h-3.5 w-3.5 mr-2" />
-              Remove Section
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <Check className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handleCancelEdit}
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div
+              className="flex items-center gap-2 flex-1 cursor-pointer"
+              onClick={onToggle}
+            >
+              <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <span className="text-[10px] font-bold text-primary">
+                  {getSectionIcon(sectionType)}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-medium">{sectionType}</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground tabular-nums">
+                {blockCount}
+              </span>
+              {isExpanded ? (
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground transition-transform" />
+              )}
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <MoreVertical className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleStartEditing}>
+                  <Pencil className="h-3.5 w-3.5 mr-2" />
+                  Rename Section
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={onRemoveSection}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-2" />
+                  Remove Section
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        )}
       </div>
 
       {/* Section Content */}
@@ -292,7 +358,7 @@ function SortableSection({
 }
 
 export function ResumeStructure() {
-  const { structure, blocks, removeBlockFromSection, addSection, removeSection, reorderSections, reorderBlocksInSection } = useBuilderStore();
+  const { structure, blocks, removeBlockFromSection, addSection, removeSection, renameSection, reorderSections, reorderBlocksInSection } = useBuilderStore();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(structure.sectionOrder));
   const [isAddingCustom, setIsAddingCustom] = useState(false);
   const [customSectionName, setCustomSectionName] = useState("");
@@ -407,6 +473,7 @@ export function ResumeStructure() {
                         blockCount={sectionBlocks.length}
                         onToggle={() => toggleSection(sectionType)}
                         onRemoveSection={() => removeSection(sectionType)}
+                        onRenameSection={(newName) => renameSection(sectionType, newName)}
                         onRemoveBlock={(blockId) => removeBlockFromSection(blockId, sectionType)}
                         blocks={blocks}
                         onReorderBlocks={(newOrder) => reorderBlocksInSection(sectionType, newOrder)}
