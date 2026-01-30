@@ -227,15 +227,15 @@ export function PdfPreview() {
             </div>
           ) : pdfUrl ? (
             <div
-              className="shadow-xl rounded-sm overflow-hidden transition-transform duration-200 ease-out"
+              className="shadow-xl rounded-sm overflow-hidden transition-all duration-200 ease-out"
               style={{
-                transform: `scale(${zoom / 100})`,
-                transformOrigin: "top center",
+                width: `calc(9.5in * ${zoom / 100})`,
+                height: `calc(11in * ${zoom / 100})`,
               }}
             >
               <iframe
-                src={pdfUrl}
-                className="w-[8.5in] h-[11in] border-0 bg-white"
+                src={`${pdfUrl}#navpanes=0&zoom=${zoom}`}
+                className="w-full h-full border-0 bg-white"
                 title="Resume Preview"
               />
             </div>
