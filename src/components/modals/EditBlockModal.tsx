@@ -29,6 +29,7 @@ interface EditBlockModalProps {
 }
 
 const SECTION_TYPES = [
+  { value: "PLAIN", label: "Plain (No Title)" },
   { value: "SUMMARY", label: "Summary" },
   { value: "EDUCATION", label: "Education" },
   { value: "EXPERIENCE", label: "Experience" },

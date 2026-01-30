@@ -36,6 +36,7 @@ interface ResumeDocument {
 }
 
 const SECTION_TITLES: Record<string, string> = {
+  PLAIN: "", // No title for plain sections
   SUMMARY: "SUMMARY",
   EDUCATION: "EDUCATION",
   EXPERIENCE: "RELEVANT EXPERIENCE",
@@ -46,6 +47,7 @@ const SECTION_TITLES: Record<string, string> = {
 };
 
 const SECTION_WRAPPERS: Record<string, { start: string; end: string }> = {
+  PLAIN: { start: "", end: "" }, // No wrapper for plain sections
   SUMMARY: { start: "", end: "" },
   EDUCATION: { start: "\\resumeSubHeadingListStart", end: "\\resumeSubHeadingListEnd" },
   EXPERIENCE: { start: "\\resumeSubHeadingListStart", end: "\\resumeSubHeadingListEnd" },
@@ -57,6 +59,7 @@ const SECTION_WRAPPERS: Record<string, { start: string; end: string }> = {
 
 // Per-section spacing after (matching sample resume exactly)
 const SECTION_POST_SPACING: Record<string, number> = {
+  PLAIN: 0, // No extra spacing for plain sections
   SUMMARY: -8,
   EDUCATION: 0, // resumeSubHeadingListEnd handles spacing
   EXPERIENCE: 0,
@@ -144,10 +147,13 @@ export function assembleLatex(
     const blockIds = structure.sections[sectionType] || [];
     if (blockIds.length === 0) continue;
 
-    const sectionTitle = SECTION_TITLES[sectionType] || sectionType;
+    const sectionTitle = SECTION_TITLES[sectionType] ?? sectionType;
     const wrapper = SECTION_WRAPPERS[sectionType] || { start: "", end: "" };
 
-    lines.push(`\\section{${sectionTitle}}`);
+    // Only add section header if not a PLAIN section
+    if (sectionType !== "PLAIN" && sectionTitle) {
+      lines.push(`\\section{${sectionTitle}}`);
+    }
 
     if (wrapper.start) {
       lines.push(wrapper.start);

@@ -23,6 +23,7 @@ import { ChevronDown, Plus } from "lucide-react";
 import { useBuilderStore } from "@/lib/store/builder-store";
 
 const SUGGESTED_SECTION_TYPES = [
+  "PLAIN",
   "SUMMARY",
   "EDUCATION",
   "EXPERIENCE",
