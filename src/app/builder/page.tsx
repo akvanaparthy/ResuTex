@@ -67,6 +67,7 @@ export default function BuilderPage() {
   const [preambleModalOpen, setPreambleModalOpen] = useState(false);
   const [spacingModalOpen, setSpacingModalOpen] = useState(false);
   const [aiSelectModalOpen, setAiSelectModalOpen] = useState(false);
+  const [isAIProcessing, setIsAIProcessing] = useState(false);
   const [isSettingUp, setIsSettingUp] = useState(false);
   const { toast } = useToast();
 
@@ -319,7 +320,31 @@ export default function BuilderPage() {
       <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
       <PreambleModal open={preambleModalOpen} onOpenChange={setPreambleModalOpen} />
       <SpacingSettingsModal open={spacingModalOpen} onOpenChange={setSpacingModalOpen} />
-      <AISelectModal open={aiSelectModalOpen} onOpenChange={setAiSelectModalOpen} />
+      <AISelectModal 
+        open={aiSelectModalOpen} 
+        onOpenChange={setAiSelectModalOpen}
+        onProcessingChange={setIsAIProcessing}
+      />
+
+      {/* AI Processing Overlay */}
+      {isAIProcessing && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-background border border-border rounded-lg p-6 shadow-lg max-w-sm mx-4">
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative">
+                <RefreshCw className="h-12 w-12 text-primary animate-spin" />
+                <Sparkles className="h-6 w-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+              </div>
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-1">AI is Analyzing...</h3>
+                <p className="text-sm text-muted-foreground">
+                  Evaluating variants against the job description
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

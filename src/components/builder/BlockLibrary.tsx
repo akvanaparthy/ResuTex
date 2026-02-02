@@ -51,15 +51,18 @@ export function BlockLibrary() {
 
   const handleAddBlock = async (blockId: string, sectionType: string) => {
     if (structure.sectionOrder.includes(sectionType)) {
-      const success = await addBlockToSection(blockId, sectionType);
-      if (!success) {
-        // Conflict detected - handled by ResumeStructure
+      // Check if block is already in any section
+      const isAlreadyInResume = Object.values(structure.sections).flat().includes(blockId);
+      if (isAlreadyInResume) {
         toast({
-          title: "Variant Conflict",
-          description: "Another block from this variant group is already in the resume.",
-          variant: "destructive",
+          title: "Already Added",
+          description: "This block is already in the resume.",
         });
+        return;
       }
+      
+      await addBlockToSection(blockId, sectionType);
+      // addBlockToSection now auto-swaps variants if there's a conflict
     }
   };
 

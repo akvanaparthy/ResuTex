@@ -281,28 +281,50 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   },
 
   addBlockToSection: async (blockId, sectionType) => {
-    // Validate variant conflict first
-    const { hasConflict, conflictingBlock } = await get().validateVariantConflict(blockId);
+    const state = get();
+    
+    // Get the block being added
+    const blockToAdd = state.blocks.find((b) => b.id === blockId);
+    if (!blockToAdd) return false;
 
-    if (hasConflict) {
-      // Return false to indicate conflict - caller should handle UI
-      return false;
+    // Check if block is already in structure
+    const allBlockIds = Object.values(state.structure.sections).flat();
+    if (allBlockIds.includes(blockId)) return true; // Already added
+
+    // If block has a variant group, check for conflicts and auto-remove
+    if (blockToAdd.variantGroupId) {
+      const conflictingBlockId = allBlockIds.find((id) => {
+        const block = state.blocks.find((b) => b.id === id);
+        return block?.variantGroupId === blockToAdd.variantGroupId;
+      });
+
+      if (conflictingBlockId) {
+        // Remove the conflicting block from whatever section it's in
+        set((s) => {
+          const newSections: Record<string, string[]> = {};
+          Object.keys(s.structure.sections).forEach((section) => {
+            newSections[section] = s.structure.sections[section].filter(
+              (id) => id !== conflictingBlockId
+            );
+          });
+          return {
+            structure: { ...s.structure, sections: newSections },
+          };
+        });
+      }
     }
 
-    set((state) => {
-      const currentBlocks = state.structure.sections[sectionType] || [];
-      if (currentBlocks.includes(blockId)) return state;
-
-      return {
-        structure: {
-          ...state.structure,
-          sections: {
-            ...state.structure.sections,
-            [sectionType]: [...currentBlocks, blockId],
-          },
+    // Add the new block
+    set((s) => ({
+      structure: {
+        ...s.structure,
+        sections: {
+          ...s.structure.sections,
+          [sectionType]: [...(s.structure.sections[sectionType] || []), blockId],
         },
-      };
-    });
+      },
+    }));
+
     get().saveDocument();
     return true;
   },
@@ -746,14 +768,20 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       if (!oldBlock) return;
 
       set((state) => {
-        const newStructure = { ...state.structure };
-        Object.keys(newStructure.sections).forEach((sectionType) => {
-          newStructure.sections[sectionType] = newStructure.sections[sectionType].map(
+        // Deep copy sections to ensure React detects the change
+        const newSections: Record<string, string[]> = {};
+        Object.keys(state.structure.sections).forEach((sectionType) => {
+          newSections[sectionType] = state.structure.sections[sectionType].map(
             (id) => (id === oldBlockId ? newBlockId : id)
           );
         });
 
-        return { structure: newStructure };
+        return {
+          structure: {
+            ...state.structure,
+            sections: newSections,
+          },
+        };
       });
 
       await get().saveDocument();
@@ -777,10 +805,13 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         }),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        if (data.conflict) {
-          const conflictingBlock = state.blocks.find((b) => b.id === data.conflictingBlockId);
+      const data = await response.json();
+      
+      // API returns { valid: false, conflict: { conflictingBlockIds: [...] } } on conflict
+      if (data.valid === false && data.conflict) {
+        const conflictingBlockId = data.conflict.conflictingBlockIds?.[0];
+        if (conflictingBlockId) {
+          const conflictingBlock = state.blocks.find((b) => b.id === conflictingBlockId);
           return { hasConflict: true, conflictingBlock };
         }
       }

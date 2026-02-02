@@ -11,13 +11,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Sparkles, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, Sparkles, AlertCircle } from "lucide-react";
 import { useBuilderStore } from "@/lib/store/builder-store";
 import { useToast } from "@/hooks/use-toast";
 
 interface AISelectModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onProcessingChange?: (processing: boolean) => void;
 }
 
 interface VariantGroupData {
@@ -35,12 +36,11 @@ interface AISelectionResult {
   selectedBlockId: string;
 }
 
-export function AISelectModal({ open, onOpenChange }: AISelectModalProps) {
-  const { blocks, variantGroups, structure, swapVariant, settings } = useBuilderStore();
+export function AISelectModal({ open, onOpenChange, onProcessingChange }: AISelectModalProps) {
+  const { blocks, variantGroups, structure, swapVariant, settings, addBlockToSection } = useBuilderStore();
   const { toast } = useToast();
   const [jobDescription, setJobDescription] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [results, setResults] = useState<AISelectionResult[] | null>(null);
 
   // Get variant groups that have multiple variants (more than 1 block)
   const eligibleVariantGroups = useMemo((): VariantGroupData[] => {
@@ -86,7 +86,10 @@ export function AISelectModal({ open, onOpenChange }: AISelectModalProps) {
     }
 
     setIsProcessing(true);
-    setResults(null);
+    onProcessingChange?.(true);
+    
+    // Close modal immediately
+    onOpenChange(false);
 
     try {
       const response = await fetch("/api/ai-select", {
@@ -104,28 +107,34 @@ export function AISelectModal({ open, onOpenChange }: AISelectModalProps) {
         throw new Error(data.error || "AI selection failed");
       }
 
-      setResults(data.selections);
-
       // Apply the selections
+      const selectedVariants: { groupName: string; blockName: string }[] = [];
+
       for (const selection of data.selections) {
         // Find if there's a block from this group currently in the structure
         const groupBlocks = blocks.filter((b) => b.variantGroupId === selection.groupId);
         const allBlockIds = Object.values(structure.sections).flat();
         const currentBlockInStructure = groupBlocks.find((b) => allBlockIds.includes(b.id));
 
+        const selectedBlock = blocks.find((b) => b.id === selection.selectedBlockId);
+        const group = eligibleVariantGroups.find((g) => g.groupId === selection.groupId);
+
         if (currentBlockInStructure && currentBlockInStructure.id !== selection.selectedBlockId) {
           // Swap the variant
           await swapVariant(currentBlockInStructure.id, selection.selectedBlockId);
-        } else if (!currentBlockInStructure) {
+          if (selectedBlock && group) {
+            selectedVariants.push({ groupName: group.groupName, blockName: selectedBlock.name });
+          }
+        } else if (!currentBlockInStructure && selectedBlock) {
           // No block from this group is in the structure yet
           // Find the section type and add it
-          const selectedBlock = blocks.find((b) => b.id === selection.selectedBlockId);
-          if (selectedBlock) {
-            const sectionType = selectedBlock.sectionType;
-            const store = useBuilderStore.getState();
-            // Add to section if it exists
-            if (store.structure.sectionOrder.includes(sectionType)) {
-              await store.addBlockToSection(selection.selectedBlockId, sectionType);
+          const sectionType = selectedBlock.sectionType;
+          const store = useBuilderStore.getState();
+          // Add to section if it exists
+          if (store.structure.sectionOrder.includes(sectionType)) {
+            await addBlockToSection(selection.selectedBlockId, sectionType);
+            if (group) {
+              selectedVariants.push({ groupName: group.groupName, blockName: selectedBlock.name });
             }
           }
         }
@@ -133,23 +142,31 @@ export function AISelectModal({ open, onOpenChange }: AISelectModalProps) {
 
       toast({
         title: "AI Selection Complete",
-        description: `Applied ${data.selections.length} variant selections based on the job description.`,
+        description: selectedVariants.length > 0 
+          ? `Selected: ${selectedVariants.map(v => `${v.groupName} → ${v.blockName}`).join(", ")}`
+          : `Applied ${data.selections.length} variant selections.`,
+        duration: 5000,
       });
+
+      // Reset job description for next use
+      setJobDescription("");
     } catch (error) {
       toast({
-        title: "Error",
+        title: "AI Selection Failed",
         description: error instanceof Error ? error.message : "AI selection failed",
         variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
+      onProcessingChange?.(false);
     }
   };
 
   const handleClose = () => {
-    setJobDescription("");
-    setResults(null);
-    onOpenChange(false);
+    if (!isProcessing) {
+      setJobDescription("");
+      onOpenChange(false);
+    }
   };
 
   return (
@@ -228,31 +245,6 @@ export function AISelectModal({ open, onOpenChange }: AISelectModalProps) {
               Include key requirements, skills, and qualifications from the job posting.
             </p>
           </div>
-
-          {/* Results Display */}
-          {results && results.length > 0 && (
-            <div className="p-3 rounded-lg border border-green-500/40 bg-green-500/10">
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium text-green-700 dark:text-green-400">
-                    Selection Applied
-                  </p>
-                  <ul className="mt-2 space-y-1">
-                    {results.map((r) => {
-                      const group = eligibleVariantGroups.find((g) => g.groupId === r.groupId);
-                      const selected = group?.variants.find((v) => v.blockId === r.selectedBlockId);
-                      return (
-                        <li key={r.groupId} className="text-xs text-muted-foreground">
-                          {group?.groupName}: <span className="text-foreground">{selected?.blockName}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Action Button */}
           <Button
