@@ -8,6 +8,7 @@ import { DocumentSelector } from "@/components/builder/DocumentSelector";
 import { SettingsModal } from "@/components/modals/SettingsModal";
 import { PreambleModal } from "@/components/modals/PreambleModal";
 import { SpacingSettingsModal } from "@/components/modals/SpacingSettingsModal";
+import { AISelectModal } from "@/components/modals/AISelectModal";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,7 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Download, FileText, ChevronDown, Sun, Moon, Monitor, Settings, RefreshCw, Package, FileCode, SlidersHorizontal } from "lucide-react";
+import { Download, FileText, ChevronDown, Sun, Moon, Monitor, Settings, RefreshCw, Package, FileCode, SlidersHorizontal, Sparkles } from "lucide-react";
 import { useBuilderStore } from "@/lib/store/builder-store";
 import { useTheme } from "@/components/ThemeProvider";
 import { useToast } from "@/hooks/use-toast";
@@ -65,6 +66,7 @@ export default function BuilderPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [preambleModalOpen, setPreambleModalOpen] = useState(false);
   const [spacingModalOpen, setSpacingModalOpen] = useState(false);
+  const [aiSelectModalOpen, setAiSelectModalOpen] = useState(false);
   const [isSettingUp, setIsSettingUp] = useState(false);
   const { toast } = useToast();
 
@@ -229,6 +231,17 @@ export default function BuilderPage() {
               <SlidersHorizontal className="h-3 w-3" />
               Spacing
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAiSelectModalOpen(true)}
+              disabled={isSettingUp || isCompiling}
+              className="h-7 text-xs gap-1.5 border-border/60"
+              title="AI-powered variant selection"
+            >
+              <Sparkles className="h-3 w-3" />
+              AI Suggest
+            </Button>
             {pdfUrl && !isCompiling && !isSettingUp && (
               <div className="flex items-center gap-1 ml-1">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse-dot" />
@@ -306,6 +319,7 @@ export default function BuilderPage() {
       <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
       <PreambleModal open={preambleModalOpen} onOpenChange={setPreambleModalOpen} />
       <SpacingSettingsModal open={spacingModalOpen} onOpenChange={setSpacingModalOpen} />
+      <AISelectModal open={aiSelectModalOpen} onOpenChange={setAiSelectModalOpen} />
     </div>
   );
 }

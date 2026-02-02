@@ -36,8 +36,15 @@ export interface ResumeDocument {
   updatedAt: string;
 }
 
+export interface AIConfig {
+  provider: "openai" | "anthropic" | "gemini" | null;
+  apiKey: string | null;
+  model: string | null;
+}
+
 export interface AppSettings {
   sharedBlocks: boolean;
+  aiConfig: AIConfig;
 }
 
 interface BuilderState {
@@ -105,6 +112,7 @@ interface BuilderState {
   // Actions - Settings
   loadSettings: () => Promise<void>;
   setSharedBlocks: (shared: boolean) => Promise<void>;
+  setAIConfig: (config: AIConfig) => Promise<void>;
 
   // Actions - Persistence
   loadDocument: (documentId?: string) => Promise<void>;
@@ -125,7 +133,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   spacing: { section: 2, block: -6, line: 1.0 },
   variantGroups: [],
   documents: [],
-  settings: { sharedBlocks: false },
+  settings: { sharedBlocks: false, aiConfig: { provider: null, apiKey: null, model: null } },
   isCompiling: false,
   pdfUrl: null,
   error: null,
@@ -579,7 +587,16 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       const response = await fetch("/api/settings");
       if (response.ok) {
         const settings = await response.json();
-        set({ settings: { sharedBlocks: settings.sharedBlocks } });
+        set({
+          settings: {
+            sharedBlocks: settings.sharedBlocks,
+            aiConfig: {
+              provider: settings.aiProvider || null,
+              apiKey: settings.aiApiKey || null,
+              model: settings.aiModel || null,
+            },
+          },
+        });
       }
     } catch (error) {
       console.error("Error loading settings:", error);
@@ -593,14 +610,38 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sharedBlocks: shared }),
       });
-      
+
       if (response.ok) {
-        set({ settings: { sharedBlocks: shared } });
+        set((state) => ({
+          settings: { ...state.settings, sharedBlocks: shared },
+        }));
         // Reload blocks with new setting
         await get().loadBlocks();
       }
     } catch (error) {
       console.error("Error updating settings:", error);
+    }
+  },
+
+  setAIConfig: async (config) => {
+    try {
+      const response = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          aiProvider: config.provider,
+          aiApiKey: config.apiKey,
+          aiModel: config.model,
+        }),
+      });
+
+      if (response.ok) {
+        set((state) => ({
+          settings: { ...state.settings, aiConfig: config },
+        }));
+      }
+    } catch (error) {
+      console.error("Error updating AI config:", error);
     }
   },
 

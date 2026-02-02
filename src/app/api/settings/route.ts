@@ -29,14 +29,24 @@ export async function GET() {
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
-    const { sharedBlocks } = body;
+    const { sharedBlocks, aiProvider, aiApiKey, aiModel } = body;
+
+    // Build update object with only provided fields
+    const updateData: Record<string, unknown> = {};
+    if (sharedBlocks !== undefined) updateData.sharedBlocks = sharedBlocks;
+    if (aiProvider !== undefined) updateData.aiProvider = aiProvider;
+    if (aiApiKey !== undefined) updateData.aiApiKey = aiApiKey;
+    if (aiModel !== undefined) updateData.aiModel = aiModel;
 
     const settings = await prisma.appSettings.upsert({
       where: { id: "default" },
-      update: { sharedBlocks },
+      update: updateData,
       create: {
         id: "default",
-        sharedBlocks,
+        sharedBlocks: sharedBlocks ?? false,
+        aiProvider: aiProvider ?? null,
+        aiApiKey: aiApiKey ?? null,
+        aiModel: aiModel ?? null,
       },
     });
 

@@ -54,6 +54,11 @@ model ContentBlock {
 model AppSettings {
   id           String  @id @default("default")
   sharedBlocks Boolean @default(false) // If true, blocks are shared across all documents
+  
+  // AI Configuration
+  aiProvider   String? // "openai" | "anthropic" | "gemini"
+  aiApiKey     String? // Encrypted API key
+  aiModel      String? // Selected model ID
 
   @@map("app_settings")
 }
