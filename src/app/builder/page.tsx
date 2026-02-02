@@ -93,17 +93,22 @@ export default function BuilderPage() {
       setTimeout(() => sparkle.remove(), 600);
     };
 
-    const interval = setInterval(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    const scheduleNextSparkle = () => {
       const aiButton = document.querySelector('.ai-suggest-btn');
       if (aiButton && !aiButton.hasAttribute('disabled')) {
-        const sparkleCount = 2 + Math.floor(Math.random() * 3); // 2-4 sparkles
-        for (let i = 0; i < sparkleCount; i++) {
-          createSparkle(aiButton as HTMLElement);
-        }
+        createSparkle(aiButton as HTMLElement);
       }
-    }, 800 + Math.random() * 400);
+      
+      // Schedule next sparkle at a random interval (300-1000ms)
+      const nextDelay = 300 + Math.random() * 700;
+      timeoutId = setTimeout(scheduleNextSparkle, nextDelay);
+    };
 
-    return () => clearInterval(interval);
+    scheduleNextSparkle();
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const handleLatexSetup = async () => {
