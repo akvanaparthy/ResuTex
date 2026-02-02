@@ -7,6 +7,7 @@ interface ModelInfo {
 
 // Chat/text model patterns for filtering
 const OPENAI_CHAT_PATTERNS = [
+  /^gpt-5/,
   /^gpt-4/,
   /^gpt-3\.5-turbo/,
   /^o1/,
