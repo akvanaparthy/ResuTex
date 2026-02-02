@@ -75,6 +75,37 @@ export default function BuilderPage() {
     loadDocument();
   }, [loadDocument]);
 
+  // AI Button sparkle effect
+  useEffect(() => {
+    const createSparkle = (button: HTMLElement) => {
+      const sparkle = document.createElement('div');
+      sparkle.className = 'ai-sparkle';
+      
+      const rect = button.getBoundingClientRect();
+      const x = Math.random() * rect.width;
+      const y = Math.random() * rect.height;
+      
+      sparkle.style.left = `${x}px`;
+      sparkle.style.top = `${y}px`;
+      
+      button.appendChild(sparkle);
+      
+      setTimeout(() => sparkle.remove(), 600);
+    };
+
+    const interval = setInterval(() => {
+      const aiButton = document.querySelector('.ai-suggest-btn');
+      if (aiButton && !aiButton.hasAttribute('disabled')) {
+        const sparkleCount = 2 + Math.floor(Math.random() * 3); // 2-4 sparkles
+        for (let i = 0; i < sparkleCount; i++) {
+          createSparkle(aiButton as HTMLElement);
+        }
+      }
+    }, 800 + Math.random() * 400);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const handleLatexSetup = async () => {
     setIsSettingUp(true);
     toast({
@@ -237,10 +268,10 @@ export default function BuilderPage() {
               size="sm"
               onClick={() => setAiSelectModalOpen(true)}
               disabled={isSettingUp || isCompiling}
-              className="h-7 text-xs gap-1.5 border-border/60"
+              className="ai-suggest-btn h-7 text-xs gap-1.5"
               title="AI-powered variant selection"
             >
-              <Sparkles className="h-3 w-3" />
+              <Sparkles className="h-3 w-3 sparkle-icon" />
               AI Suggest
             </Button>
             {pdfUrl && !isCompiling && !isSettingUp && (
@@ -328,19 +359,53 @@ export default function BuilderPage() {
 
       {/* AI Processing Overlay */}
       {isAIProcessing && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-background border border-border rounded-lg p-6 shadow-lg max-w-sm mx-4">
-            <div className="flex flex-col items-center gap-4">
-              <div className="relative">
-                <RefreshCw className="h-12 w-12 text-primary animate-spin" />
-                <Sparkles className="h-6 w-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+        <div className="ai-overlay fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
+          {/* Floating particles */}
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={i}
+              className="ai-particle"
+              style={{
+                left: `${Math.random() * 100}%`,
+                bottom: '-10px',
+                animationDelay: `${Math.random() * 4}s`,
+                animationDuration: `${3 + Math.random() * 3}s`,
+              }}
+            />
+          ))}
+          
+          {/* Center content */}
+          <div className="relative z-10 flex flex-col items-center gap-6">
+            {/* Glowing orb */}
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-pink-500 blur-xl opacity-60 animate-pulse" />
+              <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/20 via-blue-500/20 to-pink-500/20 backdrop-blur-sm border border-white/10 flex items-center justify-center">
+                <Sparkles className="h-10 w-10 text-white animate-pulse" />
               </div>
-              <div className="text-center">
-                <h3 className="text-lg font-semibold mb-1">AI is Analyzing...</h3>
-                <p className="text-sm text-muted-foreground">
-                  Evaluating variants against the job description
-                </p>
-              </div>
+            </div>
+            
+            {/* Text */}
+            <div className="text-center">
+              <h3 className="text-xl font-semibold text-white mb-2">
+                AI Magic in Progress
+              </h3>
+              <p className="text-sm text-white/70 max-w-xs">
+                Analyzing your resume variants against the job description...
+              </p>
+            </div>
+            
+            {/* Loading dots */}
+            <div className="flex gap-1.5">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="w-2 h-2 rounded-full bg-white/80"
+                  style={{
+                    animation: 'pulse 1.5s ease-in-out infinite',
+                    animationDelay: `${i * 0.2}s`,
+                  }}
+                />
+              ))}
             </div>
           </div>
         </div>
